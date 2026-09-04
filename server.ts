@@ -14,6 +14,9 @@ import { TODAS_LAS_CARTAS, obtenerCartaPorNumero, obtenerCartaPorNombre } from "
 
 dotenv.config();
 
+// Ensure HMR is disabled in development container environment to avoid websocket errors
+process.env.DISABLE_HMR = "true";
+
 const app = express();
 const PORT = 3000;
 
@@ -371,12 +374,16 @@ app.post("/api/tarot/chat", async (req, res) => {
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: false,
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
+    app.use("/as-de-jupiter", express.static(distPath));
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));

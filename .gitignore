@@ -39,4 +39,5 @@ Thumbs.db
 # Vite & cache
 .vite/
 .turbo/
+dev-dist/
 
