@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "As de Júpiter - Luna Tarot",
+  "short_name": "As Júpiter",
+  "description": "Lecturas simbólicas y reflexivas de Tarot de Marsella con Luna, tarotista de IA.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0712",
+  "theme_color": "#D4AF37",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

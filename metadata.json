@@ -1,0 +1,6 @@
+{
+  "name": "As de Júpiter - Luna Tarot",
+  "description": "Lecturas simbólicas y reflexivas de Tarot de Marsella con Luna, tarotista de IA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

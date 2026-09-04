@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --font-cinzel: 'Cinzel', serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --color-gold: #D4AF37;
+  --color-gold-light: #F3E5AB;
+  --color-gold-dark: #997A15;
+  --color-parchment: #E0D8C8;
+  --color-night-dark: #0A0712;
+  --color-night-card: #151025;
+  --color-night-elevated: #1A1435;
+  --color-night-highlight: #2A2050;
+}
+
+.font-cinzel {
+  font-family: var(--font-cinzel);
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+/* Artistic Flair Starlight Pattern */
+.bg-starlight-pattern {
+  background-image: radial-gradient(#D4AF37 0.6px, transparent 0.6px);
+  background-size: 24px 24px;
+}
+
+/* Custom scrollbar in antique gold & midnight */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0712;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.25);
+  border-radius: 9999px;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.5);
+}
+
