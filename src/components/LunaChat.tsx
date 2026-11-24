@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, Compass, MessageSquare, Sparkles, RefreshCw, AlertCircle, Plus } from 'lucide-react';
-import { TarotTema, MensajeChat, CartaNuevaChat } from '../types/tarot';
+import { TarotTema, MensajeChat, CartaNuevaChat, ChatConsultaResponse } from '../types/tarot';
 import { TarotCardVisual } from './TarotCardVisual';
 import { obtenerCartaPorNumero } from '../data/cartas';
+import { postTarotApi, TarotApiError, LUNA_FRIENDLY_ERROR } from '../services/tarotApi';
 
 interface LunaChatProps {
   tema: TarotTema;
@@ -32,6 +33,7 @@ export const LunaChat: React.FC<LunaChatProps> = ({
   const [inputTexto, setInputTexto] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastFailedQuestion, setLastFailedQuestion] = useState<string | null>(null);
   const [sessionCartas, setSessionCartas] = useState(cartasPrevias);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -43,51 +45,44 @@ export const LunaChat: React.FC<LunaChatProps> = ({
     scrollToBottom();
   }, [mensajes, isLoading]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputTexto.trim() || isLoading) return;
+  const sendQuestion = async (userQuestion: string, appendUserMessage: boolean) => {
+    if (!userQuestion.trim() || isLoading) return;
 
-    const userQuestion = inputTexto.trim();
-    setInputTexto('');
     setError(null);
+    setLastFailedQuestion(null);
 
-    const userMessage: MensajeChat = {
-      id: `usr-${Date.now()}`,
-      role: 'user',
-      text: userQuestion,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
+    const historial = mensajes.map((m) => ({
+      role: m.role,
+      text: m.text,
+    }));
 
-    setMensajes((prev) => [...prev, userMessage]);
+    if (appendUserMessage) {
+      const userMessage: MensajeChat = {
+        id: `usr-${Date.now()}`,
+        role: 'user',
+        text: userQuestion,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMensajes((prev) => [...prev, userMessage]);
+    }
+
     setIsLoading(true);
 
     try {
-      const historial = mensajes.map((m) => ({
-        role: m.role,
-        text: m.text,
-      }));
-
-      const response = await fetch('/api/tarot/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tema,
-          preguntaInicial,
-          cartasPrevias: sessionCartas,
-          historialChat: historial,
-          nuevaPregunta: userQuestion,
-        }),
+      const data = await postTarotApi<{
+        success: boolean;
+        data: ChatConsultaResponse;
+      }>('/api/tarot/chat', {
+        tema,
+        preguntaInicial,
+        cartasPrevias: sessionCartas,
+        historialChat: historial,
+        nuevaPregunta: userQuestion,
       });
-
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Error al comunicar con Luna.');
-      }
 
       const modelReply = data.data.respuesta;
       const cartasNuevas: CartaNuevaChat[] = data.data.cartas_nuevas || [];
 
-      // If new cards were revealed, add them to session state
       if (cartasNuevas.length > 0) {
         setSessionCartas((prev) => [
           ...prev,
@@ -108,12 +103,29 @@ export const LunaChat: React.FC<LunaChatProps> = ({
       };
 
       setMensajes((prev) => [...prev, modelMessage]);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Error de conexión con el oráculo.');
+    } catch (err: unknown) {
+      if (err instanceof TarotApiError) {
+        setError(err.message);
+      } else {
+        setError(LUNA_FRIENDLY_ERROR);
+      }
+      setLastFailedQuestion(userQuestion);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputTexto.trim() || isLoading) return;
+    const userQuestion = inputTexto.trim();
+    setInputTexto('');
+    await sendQuestion(userQuestion, true);
+  };
+
+  const handleRetry = async () => {
+    if (!lastFailedQuestion || isLoading) return;
+    await sendQuestion(lastFailedQuestion, false);
   };
 
   return (
@@ -236,9 +248,22 @@ export const LunaChat: React.FC<LunaChatProps> = ({
         )}
 
         {error && (
-          <div className="p-3.5 rounded-xl bg-red-950/40 border border-red-500/30 text-red-200 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-            <span>{error}</span>
+          <div className="p-3.5 rounded-xl bg-red-950/40 border border-red-500/30 text-red-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+            {lastFailedQuestion && (
+              <button
+                type="button"
+                onClick={handleRetry}
+                disabled={isLoading}
+                className="self-start sm:self-center px-3 py-1.5 rounded-lg bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 border border-[#D4AF37]/50 text-[#F3E5AB] text-[11px] font-cinzel font-semibold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer flex-shrink-0"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Reintentar</span>
+              </button>
+            )}
           </div>
         )}
 

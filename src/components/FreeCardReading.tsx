@@ -4,6 +4,7 @@ import { Sparkles, MessageSquare, ArrowRight, RotateCcw, AlertCircle, Quote, Com
 import { TarotTema, CartaGratisResponse, CartaConocimiento } from '../types/tarot';
 import { ThemeSelector } from './ThemeSelector';
 import { TarotCardVisual } from './TarotCardVisual';
+import { postTarotApi, TarotApiError, LUNA_FRIENDLY_ERROR } from '../services/tarotApi';
 
 interface FreeCardReadingProps {
   onStartChatWithReading: (tema: TarotTema, pregunta: string, carta: { numero: number; nombre: string }) => void;
@@ -18,46 +19,52 @@ export const FreeCardReading: React.FC<FreeCardReadingProps> = ({
   const [pregunta, setPregunta] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRateLimitError, setIsRateLimitError] = useState(false);
   const [resultado, setResultado] = useState<CartaGratisResponse | null>(null);
   const [cartaDetalle, setCartaDetalle] = useState<CartaConocimiento | null>(null);
   const [showFullDetails, setShowFullDetails] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeFreeReading = async () => {
     setIsLoading(true);
     setError(null);
+    setIsRateLimitError(false);
     setResultado(null);
     setCartaDetalle(null);
 
     try {
-      const response = await fetch('/api/tarot/carta-gratis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tema,
-          pregunta: pregunta.trim() || undefined,
-        }),
+      const data = await postTarotApi<{
+        success: boolean;
+        data: CartaGratisResponse;
+        cartaDetalle: CartaConocimiento | null;
+      }>('/api/tarot/carta-gratis', {
+        tema,
+        pregunta: pregunta.trim() || undefined,
       });
-
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Error al invocar la lectura de Luna.');
-      }
 
       setResultado(data.data);
       setCartaDetalle(data.cartaDetalle);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Ocurrió un error inesperado al conectar con Luna.');
+    } catch (err: unknown) {
+      if (err instanceof TarotApiError) {
+        setError(err.message);
+        setIsRateLimitError(err.isRateLimit);
+      } else {
+        setError(LUNA_FRIENDLY_ERROR);
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await executeFreeReading();
   };
 
   const handleReset = () => {
     setResultado(null);
     setCartaDetalle(null);
     setError(null);
+    setIsRateLimitError(false);
   };
 
   return (
@@ -129,12 +136,25 @@ export const FreeCardReading: React.FC<FreeCardReadingProps> = ({
             </div>
 
             {error && (
-              <div className="p-4 rounded-xl bg-red-950/40 border border-red-500/40 text-red-200 text-sm flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-red-300">Mensaje del oráculo:</p>
-                  <p className="text-xs text-red-200/90 mt-0.5">{error}</p>
+              <div className="p-4 rounded-xl bg-red-950/40 border border-red-500/40 text-red-200 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-red-300">Mensaje de Luna:</p>
+                    <p className="text-xs text-red-200/90 mt-0.5">{error}</p>
+                  </div>
                 </div>
+                {!isRateLimitError && (
+                  <button
+                    type="button"
+                    onClick={executeFreeReading}
+                    disabled={isLoading}
+                    className="self-start sm:self-center px-3.5 py-2 rounded-lg bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 border border-[#D4AF37]/50 text-[#F3E5AB] text-xs font-cinzel font-semibold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer flex-shrink-0"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reintentar</span>
+                  </button>
+                )}
               </div>
             )}
 

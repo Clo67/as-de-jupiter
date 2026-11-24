@@ -20,11 +20,114 @@ process.env.DISABLE_HMR = "true";
 const app = express();
 const PORT = 3000;
 
+app.set("trust proxy", 1);
 app.use(express.json());
+
+const ALLOWED_EXACT_ORIGINS = new Set(["https://clo67.github.io"]);
+const LOCALHOST_ORIGIN_REGEX = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
+
+function isOriginAllowed(origin: string): boolean {
+  if (!origin) return true; // Same-origin requests without Origin header
+  if (ALLOWED_EXACT_ORIGINS.has(origin)) return true;
+  if (LOCALHOST_ORIGIN_REGEX.test(origin)) return true;
+  if (/^https:\/\/ais-(dev|pre)-[a-z0-9-]+\.us-[a-z0-9]+\.run\.app$/i.test(origin)) return true;
+  return false;
+}
+
+app.use("/api", (req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    if (!isOriginAllowed(origin)) {
+      return res.status(403).json({ success: false, error: "Origen no autorizado." });
+    }
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept");
+  }
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
+// Rate limit diario en memoria por IP (máximo 5 cartas gratis por día)
+const MAX_FREE_CARDS_PER_DAY = 5;
+const ipDailyCounts = new Map<string, number>();
+
+function getClientIp(req: express.Request): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    return forwarded.split(",")[0].trim();
+  }
+  return req.ip || "local";
+}
+
+function checkFreeCardRateLimit(ip: string): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  const key = `${today}:${ip}`;
+  if (ipDailyCounts.size > 5000) {
+    for (const k of ipDailyCounts.keys()) {
+      if (!k.startsWith(`${today}:`)) ipDailyCounts.delete(k);
+    }
+  }
+  const current = ipDailyCounts.get(key) || 0;
+  if (current >= MAX_FREE_CARDS_PER_DAY) {
+    return false;
+  }
+  ipDailyCounts.set(key, current + 1);
+  return true;
+}
+
+function isValidCardNumber(n: unknown): n is number {
+  return typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 21;
+}
+
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === "string" && v.trim().length > 0;
+}
+
+function validateCartaGratis(data: any): boolean {
+  if (!data || typeof data !== "object") return false;
+  if (!data.carta || typeof data.carta !== "object") return false;
+  return (
+    isValidCardNumber(data.carta.numero) &&
+    isNonEmptyString(data.carta.nombre) &&
+    isNonEmptyString(data.interpretacion_breve)
+  );
+}
+
+function validateTresCartas(data: any): boolean {
+  if (!data || typeof data !== "object") return false;
+  if (!Array.isArray(data.cartas) || data.cartas.length !== 3) return false;
+  if (!isNonEmptyString(data.cierre_narrativo)) return false;
+  const seen = new Set<number>();
+  for (const c of data.cartas) {
+    if (!c || typeof c !== "object") return false;
+    if (!isNonEmptyString(c.posicion)) return false;
+    if (!isValidCardNumber(c.numero) || seen.has(c.numero)) return false;
+    seen.add(c.numero);
+    if (!isNonEmptyString(c.nombre) || !isNonEmptyString(c.interpretacion)) return false;
+  }
+  return true;
+}
+
+function validateChat(data: any): boolean {
+  if (!data || typeof data !== "object") return false;
+  if (!isNonEmptyString(data.respuesta)) return false;
+  if (data.cartas_nuevas !== undefined) {
+    if (!Array.isArray(data.cartas_nuevas)) return false;
+    for (const c of data.cartas_nuevas) {
+      if (!c || typeof c !== "object") return false;
+      if (!isValidCardNumber(c.numero) || !isNonEmptyString(c.nombre)) return false;
+    }
+  }
+  return true;
+}
 
 // List of recommended models to cascade through in case of 503 / high demand spikes
 const MODEL_CANDIDATES = [
-  "gemini-3.7-flash",
+  "gemini-4-hydrogen",
   "gemini-flash-latest",
   "gemini-3.1-flash-lite",
 ];
@@ -53,19 +156,20 @@ function getGeminiClient(): GoogleGenAI {
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Resilient generate content wrapper with model cascade & exponential backoff
+ * Resilient generate content wrapper with model cascade, exponential backoff & schema validation
  */
 async function generateWithGeminiFallback(params: {
   contents: string;
   systemInstruction: string;
   responseSchema: any;
-  temperature?: number;
-}): Promise<string> {
+  validator: (data: any) => boolean;
+}): Promise<any> {
   const ai = getGeminiClient();
   let lastError: any = null;
 
   for (const modelName of MODEL_CANDIDATES) {
     const maxRetries = 2;
+    const isGemini4 = modelName.startsWith("gemini-4-");
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         if (attempt > 0) {
@@ -74,19 +178,33 @@ async function generateWithGeminiFallback(params: {
           await delay(backoff);
         }
 
+        const config: Record<string, any> = {
+          systemInstruction: params.systemInstruction,
+          responseMimeType: "application/json",
+          responseSchema: params.responseSchema,
+        };
+        if (!isGemini4) {
+          config.temperature = 0.7;
+        }
+
         const response = await ai.models.generateContent({
           model: modelName,
           contents: params.contents,
-          config: {
-            systemInstruction: params.systemInstruction,
-            responseMimeType: "application/json",
-            responseSchema: params.responseSchema,
-            temperature: params.temperature ?? 0.7,
-          },
+          config,
         });
 
         if (response.text) {
-          return response.text;
+          const cleaned = response.text
+            .trim()
+            .replace(/^```json\s*/i, "")
+            .replace(/^```\s*/i, "")
+            .replace(/\s*```$/i, "")
+            .trim();
+          const parsed = JSON.parse(cleaned);
+          if (params.validator(parsed)) {
+            return parsed;
+          }
+          throw new Error("La respuesta del modelo no cumplió con el schema esperado.");
         }
       } catch (err: any) {
         lastError = err;
@@ -102,7 +220,6 @@ async function generateWithGeminiFallback(params: {
         console.warn(`[Gemini Warning] Model ${modelName} failed (attempt ${attempt + 1}):`, errMsg);
 
         if (!isTransient && attempt === 0) {
-          // Non-transient error, move to next model candidate directly
           break;
         }
       }
@@ -110,74 +227,6 @@ async function generateWithGeminiFallback(params: {
   }
 
   throw lastError || new Error("Todos los modelos de Gemini están experimentando alta demanda.");
-}
-
-/**
- * Intelligent in-memory fallback using the 22 Arcanos Mayores Marseille knowledge base
- * Activated only if all external API calls are unavailable.
- */
-function generateLocalFallbackReading(params: {
-  tipo: "carta_gratis" | "tres_cartas" | "chat";
-  tema: string;
-  pregunta?: string;
-  posiciones?: string[];
-  cartasPrevias?: Array<{ numero: number; nombre: string; posicion?: string }>;
-}) {
-  const { tipo, tema, pregunta = "", posiciones = ["Situación actual", "Obstáculo / Desafío", "Consejo y rumbo"] } = params;
-
-  // Pick deterministic yet organic cards based on question hash & timestamp
-  const seed = (pregunta + tema + Date.now()).split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const shuffledCartas = [...TODAS_LAS_CARTAS].sort((a, b) => {
-    return ((seed * (a.numero + 1)) % 100) - ((seed * (b.numero + 1)) % 100);
-  });
-
-  const temaKey = (["amor", "dinero", "futuro", "familia"].includes(tema) ? tema : "futuro") as "amor" | "dinero" | "futuro" | "familia";
-
-  if (tipo === "carta_gratis") {
-    const carta = shuffledCartas[0];
-    const temaTexto = carta.temas ? carta.temas[temaKey] : carta.significado_general;
-    return {
-      carta: {
-        numero: carta.numero,
-        nombre: carta.nombre,
-      },
-      interpretacion_breve: `Para tu consulta sobre ${tema}, ${carta.nombre} se hace presente. ${temaTexto} En lo positivo, potencia ${carta.aspecto_positivo.toLowerCase()}, pero recuerda atender ${carta.aspecto_desafiante.toLowerCase()}. ${carta.consejo}`,
-    };
-  }
-
-  if (tipo === "tres_cartas") {
-    const seleccionadas = shuffledCartas.slice(0, 3);
-    const cartas = seleccionadas.map((carta, i) => {
-      const posNombre = posiciones[i] || `Posición ${i + 1}`;
-      const temaTexto = carta.temas ? carta.temas[temaKey] : carta.significado_general;
-      return {
-        posicion: posNombre,
-        numero: carta.numero,
-        nombre: carta.nombre,
-        interpretacion: `En la posición de ${posNombre}, ${carta.nombre} señala ${carta.significado_general.toLowerCase()} Frente a tu tema de ${tema}, ${temaTexto} Clave: ${carta.consejo}`,
-        detalle: carta,
-      };
-    });
-
-    return {
-      cartas,
-      cierre_narrativo: `El recorrido desde ${seleccionadas[0].nombre} pasando por el desafío de ${seleccionadas[1].nombre} culmina en la sabiduría de ${seleccionadas[2].nombre}. Esta tríada te invita a transformar la incertidumbre en foco claro: confía en tus recursos y avanza con templanza.`,
-    };
-  }
-
-  // Chat fallback
-  const cartaNueva = shuffledCartas[3];
-  return {
-    respuesta: `Al reflexionar sobre tu consulta y los arcanos presentes, la energía sugiere mantener la calma y escuchar tu intuición más profunda. ${cartaNueva.nombre} complementa esta etapa recordándote: "${cartaNueva.consejo}".`,
-    cartas_nuevas: [
-      {
-        numero: cartaNueva.numero,
-        nombre: cartaNueva.nombre,
-        motivo: "Aparece para dar claridad práctica a tu pregunta de seguimiento.",
-        detalle: cartaNueva,
-      },
-    ],
-  };
 }
 
 // Health check endpoint
@@ -192,7 +241,17 @@ app.get("/api/tarot/cartas", (req, res) => {
 
 // Endpoint 1: Carta gratis (1 carta)
 app.post("/api/tarot/carta-gratis", async (req, res) => {
-  const { tema = "futuro", pregunta = "" } = req.body;
+  const clientIp = getClientIp(req);
+  if (!checkFreeCardRateLimit(clientIp)) {
+    return res.status(429).json({
+      success: false,
+      code: "RATE_LIMIT_EXCEEDED",
+      error:
+        "Hoy ya consultaste tus 5 cartas gratuitas. Las cartas necesitan reposar hasta mañana para seguir guiándote con claridad.",
+    });
+  }
+
+  const { tema = "futuro", pregunta = "" } = req.body || {};
   try {
     const prompt = buildLunaPrompt({
       tipo: "carta_gratis",
@@ -200,25 +259,13 @@ app.post("/api/tarot/carta-gratis", async (req, res) => {
       pregunta,
     });
 
-    let parsedData: any;
-    try {
-      const rawText = await generateWithGeminiFallback({
-        contents: prompt,
-        systemInstruction: LUNA_SYSTEM_INSTRUCTION,
-        responseSchema: LUNA_SCHEMA_CARTA_GRATIS,
-        temperature: 0.7,
-      });
-      parsedData = JSON.parse(rawText);
-    } catch (apiErr) {
-      console.warn("Fallback to Marseille knowledge engine for carta-gratis:", apiErr);
-      parsedData = generateLocalFallbackReading({
-        tipo: "carta_gratis",
-        tema,
-        pregunta,
-      });
-    }
+    const parsedData = await generateWithGeminiFallback({
+      contents: prompt,
+      systemInstruction: LUNA_SYSTEM_INSTRUCTION,
+      responseSchema: LUNA_SCHEMA_CARTA_GRATIS,
+      validator: validateCartaGratis,
+    });
 
-    // Complement with card data from the knowledge base
     const cartaEncontrada =
       obtenerCartaPorNumero(parsedData.carta?.numero) ||
       obtenerCartaPorNombre(parsedData.carta?.nombre);
@@ -230,9 +277,9 @@ app.post("/api/tarot/carta-gratis", async (req, res) => {
     });
   } catch (error: any) {
     console.error("Error en lectura de carta gratis:", error);
-    res.status(500).json({
+    res.status(502).json({
       success: false,
-      error: error.message || "Error al realizar la lectura con Luna",
+      error: "Las cartas necesitan un momento de silencio. Probá de nuevo en unos segundos.",
     });
   }
 });
@@ -243,7 +290,7 @@ app.post("/api/tarot/lectura-tres-cartas", async (req, res) => {
     tema = "futuro",
     pregunta = "",
     posiciones = ["Situación actual", "Obstáculo / Desafío", "Consejo y rumbo"],
-  } = req.body;
+  } = req.body || {};
 
   try {
     const prompt = buildLunaPrompt({
@@ -253,26 +300,13 @@ app.post("/api/tarot/lectura-tres-cartas", async (req, res) => {
       esquemaPosiciones: posiciones,
     });
 
-    let parsedData: any;
-    try {
-      const rawText = await generateWithGeminiFallback({
-        contents: prompt,
-        systemInstruction: LUNA_SYSTEM_INSTRUCTION,
-        responseSchema: LUNA_SCHEMA_TRES_CARTAS,
-        temperature: 0.75,
-      });
-      parsedData = JSON.parse(rawText);
-    } catch (apiErr) {
-      console.warn("Fallback to Marseille knowledge engine for lectura-tres-cartas:", apiErr);
-      parsedData = generateLocalFallbackReading({
-        tipo: "tres_cartas",
-        tema,
-        pregunta,
-        posiciones,
-      });
-    }
+    const parsedData = await generateWithGeminiFallback({
+      contents: prompt,
+      systemInstruction: LUNA_SYSTEM_INSTRUCTION,
+      responseSchema: LUNA_SCHEMA_TRES_CARTAS,
+      validator: validateTresCartas,
+    });
 
-    // Attach card details for each card
     const cartasConDetalles = (parsedData.cartas || []).map((c: any) => {
       const detalle =
         c.detalle ||
@@ -293,9 +327,9 @@ app.post("/api/tarot/lectura-tres-cartas", async (req, res) => {
     });
   } catch (error: any) {
     console.error("Error en lectura de 3 cartas:", error);
-    res.status(500).json({
+    res.status(502).json({
       success: false,
-      error: error.message || "Error al realizar la lectura de 3 cartas con Luna",
+      error: "Las cartas necesitan un momento de silencio. Probá de nuevo en unos segundos.",
     });
   }
 });
@@ -308,9 +342,9 @@ app.post("/api/tarot/chat", async (req, res) => {
     cartasPrevias = [],
     historialChat = [],
     nuevaPregunta = "",
-  } = req.body;
+  } = req.body || {};
 
-  if (!nuevaPregunta || !nuevaPregunta.trim()) {
+  if (!nuevaPregunta || typeof nuevaPregunta !== "string" || !nuevaPregunta.trim()) {
     return res.status(400).json({ success: false, error: "La pregunta no puede estar vacía." });
   }
 
@@ -324,26 +358,13 @@ app.post("/api/tarot/chat", async (req, res) => {
       nuevaPregunta,
     });
 
-    let parsedData: any;
-    try {
-      const rawText = await generateWithGeminiFallback({
-        contents: prompt,
-        systemInstruction: LUNA_SYSTEM_INSTRUCTION,
-        responseSchema: LUNA_SCHEMA_CHAT,
-        temperature: 0.7,
-      });
-      parsedData = JSON.parse(rawText);
-    } catch (apiErr) {
-      console.warn("Fallback to Marseille knowledge engine for chat:", apiErr);
-      parsedData = generateLocalFallbackReading({
-        tipo: "chat",
-        tema,
-        pregunta: nuevaPregunta,
-        cartasPrevias,
-      });
-    }
+    const parsedData = await generateWithGeminiFallback({
+      contents: prompt,
+      systemInstruction: LUNA_SYSTEM_INSTRUCTION,
+      responseSchema: LUNA_SCHEMA_CHAT,
+      validator: validateChat,
+    });
 
-    // Attach details for any newly brought cards
     if (parsedData.cartas_nuevas && Array.isArray(parsedData.cartas_nuevas)) {
       parsedData.cartas_nuevas = parsedData.cartas_nuevas.map((c: any) => {
         const detalle =
@@ -363,11 +384,16 @@ app.post("/api/tarot/chat", async (req, res) => {
     });
   } catch (error: any) {
     console.error("Error en chat con Luna:", error);
-    res.status(500).json({
+    res.status(502).json({
       success: false,
-      error: error.message || "Error al procesar la consulta con Luna",
+      error: "Las cartas necesitan un momento de silencio. Probá de nuevo en unos segundos.",
     });
   }
+});
+
+// Garantizar que cualquier ruta /api/* inexistente devuelva JSON y no HTML
+app.all("/api/*", (req, res) => {
+  res.status(404).json({ success: false, error: "Ruta de API no encontrada." });
 });
 
 // Setup Vite middleware or static serving
