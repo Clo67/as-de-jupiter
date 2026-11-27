@@ -1,16 +1,17 @@
 {
   "_meta": {
-    "fuente": "Tradición general del Tarot de Marsella (dominio público). No proviene de un libro o autor específico del usuario.",
+    "fuente": "Tradición general del Tarot de Marsella (Nicolas Conver, dominio público). No proviene de un libro o autor específico del usuario.",
     "estado": "RECOMENDACIÓN - pendiente de validar contra material propio si existe",
     "sistema_invertidas": "No se usan cartas invertidas en el MVP (no definido en el proyecto)",
     "campos_omitidos": "No se incluye 'combinaciones con otras cartas' ni 'lectura espiritual' por ser funcionalidades no definidas aún",
-    "version": "1.0",
-    "ultima_actualizacion": "2026-09-01"
+    "version": "1.1",
+    "ultima_actualizacion": "2026-11-25"
   },
   "cartas": [
     {
       "numero": 0,
       "nombre": "El Loco",
+      "iconografia_marsella": "Sin número impreso en la carta. Un viajero barbado camina hacia la derecha con traje de bufón multicolor (amarillo, rojo y azul) con cascabeles en el gorro y el cinturón. Sostiene un bastón amarillo con la mano derecha y apoya un palo rojo al hombro izquierdo del que cuelga un hatillo o bolsa. Detrás, un pequeño perro color rosado/pardo apoya sus patas sobre la pierna del viajero y tira de su ropa desgarrándola; camina sobre suelo amarillo con matas de hierba verde.",
       "palabras_clave": ["libertad", "espontaneidad", "riesgo", "inocencia", "salto de fe"],
       "significado_general": "Representa el inicio de un camino sin plan fijo, la confianza en lo desconocido y la libertad de no estar atado a estructuras.",
       "aspecto_positivo": "Apertura a nuevas experiencias, espontaneidad, desapego de lo material, confianza en el proceso.",
@@ -21,26 +22,28 @@
         "futuro": "Un camino abierto, múltiples posibilidades, pero sin dirección definida aún.",
         "familia": "Necesidad de independencia dentro del núcleo familiar, o un quiebre con lo tradicional."
       },
-      "consejo": "Animate a dar el paso, pero mirá dónde pisás antes de saltar."
+      "consejo": "Anímate a dar el paso, pero mira dónde pisas antes de saltar."
     },
     {
       "numero": 1,
       "nombre": "El Mago",
+      "iconografia_marsella": "Un joven de pie frente a una mesa de tres patas visibles, vestido con túnica azul, roja y amarilla. Lleva un sombrero amarillo y rojo de ala ancha cuya copa tiene forma de ocho horizontal. Sostiene una varita corta en la mano izquierda y con la derecha señala o toca una moneda dorada sobre la mesa. Sobre la mesa reposan cubiletes, dados, un cuchillo, monedas y pequeños instrumentos; entre sus pies brota una planta verde sobre el suelo amarillo.",
       "palabras_clave": ["voluntad", "habilidad", "iniciativa", "recursos", "acción"],
       "significado_general": "Simboliza la capacidad de transformar una idea en acción concreta usando los recursos disponibles.",
       "aspecto_positivo": "Confianza, creatividad, capacidad de manifestar objetivos, buena comunicación.",
       "aspecto_desafiante": "Manipulación, dispersión, usar el talento sin ética o sin foco.",
       "temas": {
         "amor": "Alguien que toma la iniciativa; capacidad de seducción o de construir algo nuevo con determinación.",
-        "dinero": "Momento favorable para emprender o concretar un plan financiero con los recursos que ya tenés.",
+        "dinero": "Momento favorable para emprender o concretar un plan financiero con los recursos que ya tienes.",
         "futuro": "Un período de acción concreta donde tus decisiones tienen peso real.",
         "familia": "Rol de quien organiza o toma las riendas dentro de la familia."
       },
-      "consejo": "Tenés las herramientas necesarias; el paso siguiente es empezar."
+      "consejo": "Tienes las herramientas necesarias; el paso siguiente es empezar."
     },
     {
       "numero": 2,
       "nombre": "La Papisa",
+      "iconografia_marsella": "Una mujer sentada de frente en un trono delante de un velo o cortinaje rojo y azul sostenido detrás de ella. Viste manto azul sobre túnica roja, toca blanca alrededor del rostro y una tiara papal blanca con tres coronas doradas. Con ambas manos sostiene un libro abierto sobre su regazo mientras mira ligeramente hacia la izquierda.",
       "palabras_clave": ["intuición", "misterio", "conocimiento interior", "quietud", "sabiduría"],
       "significado_general": "Representa el saber interior, la introspección y la sabiduría que no se explica racionalmente.",
       "aspecto_positivo": "Intuición aguda, paciencia, conexión con un saber más profundo.",
@@ -56,6 +59,7 @@
     {
       "numero": 3,
       "nombre": "La Emperatriz",
+      "iconografia_marsella": "Una mujer sentada de frente en un trono de respaldo alto con formas que sugieren alas. Viste túnica roja y manto azul con detalles dorados, y lleva una corona dorada sobre la cabeza. En su mano izquierda sostiene un cetro dorado rematado por un orbe con cruz; con la mano derecha apoya contra su costado un escudo ovalado dorado con un águila heráldica.",
       "palabras_clave": ["abundancia", "fertilidad", "creatividad", "cuidado", "naturaleza"],
       "significado_general": "Simboliza la creación, el crecimiento y la abundancia en un sentido amplio: material, emocional o creativo.",
       "aspecto_positivo": "Prosperidad, cuidado de uno mismo y de otros, creatividad floreciente.",
@@ -66,11 +70,12 @@
         "futuro": "Un período fértil, de expansión y resultados tangibles.",
         "familia": "Rol maternal, cuidado del hogar, crecimiento del núcleo familiar."
       },
-      "consejo": "Cuidá lo que estás construyendo, pero sin sofocarlo."
+      "consejo": "Cuida lo que estás construyendo, pero sin sofocarlo."
     },
     {
       "numero": 4,
       "nombre": "El Emperador",
+      "iconografia_marsella": "Un hombre maduro de barba y cabello blancos, sentado en un trono de perfil mirando hacia la izquierda, con una pierna cruzada sobre la otra formando un cuatro. Lleva casco rojo con corona dorada, túnica roja y azul con hombreras doradas y un collar con medallón. En la mano derecha sostiene un cetro dorado con orbe y cruz; apoyado en el suelo a su derecha hay un escudo con un águila heráldica.",
       "palabras_clave": ["autoridad", "estructura", "estabilidad", "control", "orden"],
       "significado_general": "Representa el poder estructurado, la disciplina y la capacidad de sostener un sistema u orden.",
       "aspecto_positivo": "Liderazgo firme, seguridad, capacidad de organizar y proteger.",
@@ -81,11 +86,12 @@
         "futuro": "Consolidación de una base sólida; resultados que dependen del orden que impongas ahora.",
         "familia": "Figura paterna o de autoridad; reglas claras dentro del hogar."
       },
-      "consejo": "Poné orden donde hace falta, sin volverte inflexible."
+      "consejo": "Pon orden donde hace falta, sin volverte inflexible."
     },
     {
       "numero": 5,
       "nombre": "El Papa",
+      "iconografia_marsella": "Un pontífice barbado sentado entre dos columnas grises y azuladas, con tiara papal de tres coronas doradas, manto rojo, túnica azul y guantes blancos con cruces. Levanta la mano derecha haciendo el gesto de bendición y sostiene una cruz triple papal dorada en la mano izquierda. En la parte inferior, dos discípulos tonsurados con ropas rojas y azules se arrodillan de espaldas o de perfil frente a él mientras uno alza una mano.",
       "palabras_clave": ["tradición", "guía", "enseñanza", "institución", "moral"],
       "significado_general": "Simboliza el saber transmitido, las normas compartidas y la búsqueda de guía o consejo.",
       "aspecto_positivo": "Sabiduría compartida, buenos consejos, pertenencia a un grupo o valores comunes.",
@@ -96,11 +102,12 @@
         "futuro": "Un camino guiado por convenciones o por el consejo de alguien con más experiencia.",
         "familia": "Tradiciones familiares, figura de referencia moral dentro del grupo."
       },
-      "consejo": "Buscá consejo, pero no dejes de escuchar tu propio criterio."
+      "consejo": "Busca consejo, pero no dejes de escuchar tu propio criterio."
     },
     {
       "numero": 6,
       "nombre": "El Enamorado",
+      "iconografia_marsella": "Tres personas de pie en la mitad inferior sobre suelo amarillo: en el centro un joven de cabello rizado vestido de rojo, azul y amarillo; a su izquierda una mujer coronada de porte maduro con vestido rojo y azul le señala o apoya la mano en el hombro; a su derecha una joven con vestido rojo y amarillo le toca el pecho. Arriba, dentro de un sol con rayos alternos rojos y amarillos, un Cupido alado con los ojos descubiertos apunta su arco y flecha hacia abajo.",
       "palabras_clave": ["elección", "amor", "valores", "atracción", "decisión"],
       "significado_general": "Representa un momento de elección importante, frecuentemente ligado al corazón o a los valores personales.",
       "aspecto_positivo": "Conexión genuina, decisiones tomadas desde el amor propio y la claridad de valores.",
@@ -111,11 +118,12 @@
         "futuro": "Un cruce de caminos donde la elección definirá el rumbo siguiente.",
         "familia": "Tensión entre lo que la familia espera y lo que la persona realmente quiere."
       },
-      "consejo": "Elegí desde lo que realmente valorás, no desde lo que se espera de vos."
+      "consejo": "Elige desde lo que realmente valoras, no desde lo que se espera de ti."
     },
     {
       "numero": 7,
       "nombre": "El Carro",
+      "iconografia_marsella": "Un joven príncipe coronado con cetro en la mano derecha y dos rostros o lunas crecientes en los hombros viaja de pie dentro de un carro cúbico azul, rojo y amarillo con cuatro columnas que sostienen un dosel azul estrellado. Al frente del carro hay un escudo con iniciales y ruedas rojas a los costados. El carro es tirado por dos caballos (uno azul y otro rojo/carne) cuyos cuerpos avanzan hacia lados opuestos (izquierda y derecha) mientras sus cabezas giran hacia un mismo lado.",
       "palabras_clave": ["avance", "voluntad", "determinación", "control de fuerzas opuestas", "victoria"],
       "significado_general": "Simboliza el avance decidido hacia un objetivo, logrado al equilibrar fuerzas o impulsos contrarios.",
       "aspecto_positivo": "Determinación, superación de obstáculos, avance firme.",
@@ -126,11 +134,12 @@
         "futuro": "Movimiento y avance concreto, un objetivo que se acerca si se mantiene el rumbo.",
         "familia": "Necesidad de equilibrar demandas familiares distintas sin perder el propio rumbo."
       },
-      "consejo": "Mantené el foco en una sola dirección para no perder impulso."
+      "consejo": "Mantén el foco en una sola dirección para no perder impulso."
     },
     {
       "numero": 8,
       "nombre": "La Justicia",
+      "iconografia_marsella": "Una mujer sentada de frente en un trono dorado y rojo de respaldo alto, vestida con túnica roja, manto azul y corona dorada. Mira directamente al frente con los ojos bien abiertos, sin venda. Con su mano derecha alza verticalmente una espada recta de hoja plateada y con la izquierda sostiene una balanza dorada de dos platillos equilibrados.",
       "palabras_clave": ["equilibrio", "verdad", "consecuencias", "equidad", "decisiones justas"],
       "significado_general": "Representa el equilibrio entre causa y efecto, y la necesidad de ver una situación con objetividad.",
       "aspecto_positivo": "Claridad, decisiones justas, resolución equilibrada de conflictos.",
@@ -141,11 +150,12 @@
         "futuro": "Un resultado justo, coherente con las acciones previas.",
         "familia": "Necesidad de resolver un conflicto familiar con equidad, sin favoritismos."
       },
-      "consejo": "Mirá la situación con objetividad antes de decidir."
+      "consejo": "Mira la situación con objetividad antes de decidir."
     },
     {
       "numero": 9,
       "nombre": "El Ermitaño",
+      "iconografia_marsella": "Un anciano barbado de perfil caminando hacia la izquierda, envuelto en una túnica azul y una capa larga oscura/parda con capucha caída sobre la espalda. Con su mano derecha levantada sostiene un farol hexagonal amarillo encendido y con la izquierda se apoya en un bastón rojo alto sobre un suelo amarillo con pequeñas hierbas.",
       "palabras_clave": ["introspección", "soledad elegida", "sabiduría", "búsqueda interior", "guía propia"],
       "significado_general": "Simboliza el retiro consciente para reflexionar y encontrar respuestas propias, alejado del ruido externo.",
       "aspecto_positivo": "Autoconocimiento, sabiduría ganada con la experiencia, claridad interior.",
@@ -156,11 +166,12 @@
         "futuro": "Un período de reflexión que precede a la claridad.",
         "familia": "Necesidad de espacio propio dentro de la dinámica familiar."
       },
-      "consejo": "Tomate el tiempo que necesites; la respuesta está más cerca de lo que creés."
+      "consejo": "Tómate el tiempo que necesites; la respuesta está más cerca de lo que crees."
     },
     {
       "numero": 10,
       "nombre": "La Rueda de la Fortuna",
+      "iconografia_marsella": "Una gran rueda de madera amarilla con seis radios azules apoyada sobre un soporte doble en el suelo verde y amarillo, con una manivela visible al lado derecho. A la izquierda desciende un animal rojo/amarillo de hocico alargado; a la derecha asciende un animal azul de aspecto perruno; en lo alto de la rueda se posa una criatura alada coronada de rostro humano que sostiene una espada horizontalmente.",
       "palabras_clave": ["cambio", "ciclos", "destino", "azar", "giro de la situación"],
       "significado_general": "Representa los ciclos de cambio inevitables de la vida, momentos de giro que escapan al control total.",
       "aspecto_positivo": "Un cambio favorable, una oportunidad que llega en el momento justo.",
@@ -171,11 +182,12 @@
         "futuro": "Un cambio de ciclo se aproxima, distinto a la situación actual.",
         "familia": "Un evento que altera la dinámica habitual del grupo familiar."
       },
-      "consejo": "Fluí con el cambio en lugar de resistirlo."
+      "consejo": "Fluye con el cambio en lugar de resistirlo."
     },
     {
       "numero": 11,
       "nombre": "La Fuerza",
+      "iconografia_marsella": "Una mujer de pie vestida con túnica roja y manto azul, tocada con un sombrero amarillo de ala ancha con copa en forma de ocho horizontal. Con ambas manos sostiene suave y firmemente el hocico abierto de un león amarillo/dorado de pie o sentado junto a ella, sin cadenas ni armas.",
       "palabras_clave": ["coraje", "paciencia", "dominio interior", "resiliencia", "suavidad que vence"],
       "significado_general": "Simboliza la fortaleza que no necesita imponerse con violencia, sino con paciencia, coraje y control interior.",
       "aspecto_positivo": "Resiliencia, manejo maduro de impulsos propios o ajenos, coraje calmo.",
@@ -191,6 +203,7 @@
     {
       "numero": 12,
       "nombre": "El Colgado",
+      "iconografia_marsella": "Un hombre joven colgado cabeza abajo por su pie izquierdo mediante una cuerda atada a un travesaño de madera roja sostenido por dos troncos amarillos verticales con seis ramas cortadas cada uno. Lleva jubón azul con botones amarillos y calzas rojas; su pierna derecha se cruza tras la izquierda formando un cuatro invertido y sus brazos quedan ocultos tras la espalda mientras mira sereno al frente.",
       "palabras_clave": ["pausa", "rendición", "nueva perspectiva", "sacrificio", "espera activa"],
       "significado_general": "Representa un momento de pausa forzada o elegida que permite ver la situación desde otro ángulo.",
       "aspecto_positivo": "Nueva perspectiva, aceptación consciente de una espera necesaria.",
@@ -206,6 +219,7 @@
     {
       "numero": 13,
       "nombre": "El Arcano Sin Nombre",
+      "iconografia_marsella": "Carta numerada XIII arriba, con la cartela inferior del nombre completamente en blanco sin título impreso. Un esqueleto humano rosado/carne avanza hacia la derecha empuñando una gran guadaña de mango amarillo y hoja curva azul plateada. Sobre un suelo negro con brotes verdes yacen cabezas coronadas (de rey y de mujer), manos y pies entre la tierra oscura.",
       "palabras_clave": ["transformación", "cierre de ciclo", "final necesario", "renacimiento", "cambio profundo"],
       "significado_general": "Simboliza el fin de una etapa para dar paso a algo nuevo; un cambio profundo e inevitable.",
       "aspecto_positivo": "Liberación de lo que ya no sirve, renovación genuina.",
@@ -216,11 +230,12 @@
         "futuro": "Una transformación importante e ineludible se aproxima.",
         "familia": "Cambio estructural en la familia (mudanza, pérdida, reconfiguración de roles)."
       },
-      "consejo": "Dejá ir lo que ya cumplió su ciclo; resistirlo solo prolonga el malestar."
+      "consejo": "Deja ir lo que ya cumplió su ciclo; resistirlo solo prolonga el malestar."
     },
     {
       "numero": 14,
       "nombre": "La Templanza",
+      "iconografia_marsella": "Una figura alada (ángel) de pie con grandes alas rosadas y amarillas, vestida con túnica partida en rojo y azul y una flor amarilla sobre la frente. Sostiene una jarra azul en lo alto con su mano derecha y una jarra roja abajo con la izquierda, vertiendo un flujo continuo de agua blanca y azul en diagonal de una vasija a la otra.",
       "palabras_clave": ["equilibrio", "moderación", "paciencia", "armonía", "mezcla justa"],
       "significado_general": "Representa la búsqueda de equilibrio entre extremos, combinando elementos distintos con paciencia.",
       "aspecto_positivo": "Armonía, paciencia, capacidad de conciliar posturas opuestas.",
@@ -236,6 +251,7 @@
     {
       "numero": 15,
       "nombre": "El Diablo",
+      "iconografia_marsella": "Un ser alado de rasgos andróginos sobre un pedestal rojo en suelo negro: tiene piel azulada/carne, alas de murciélago azules, cuernos amarillos de ciervo, lengua roja sacada, un segundo rostro en el vientre y patas con garras; sostiene una espada o antorcha en la mano izquierda y alza la derecha abierta. De una argolla en el pedestal parten dos cuerdas que atan por el cuello a dos diablos menores con cuernos y cola, con las manos atadas a la espalda.",
       "palabras_clave": ["atadura", "deseo", "tentación", "dependencia", "sombra"],
       "significado_general": "Simboliza ataduras (propias o impuestas), deseos intensos y aquello que se vive como una prisión interna.",
       "aspecto_positivo": "Reconocer un patrón dañino es el primer paso para liberarse de él; también puede indicar deseo o pasión intensa.",
@@ -246,11 +262,12 @@
         "futuro": "Un patrón repetitivo que se mantendrá si no se hace un cambio consciente.",
         "familia": "Dinámicas de control o dependencia dentro del núcleo familiar."
       },
-      "consejo": "Identificá qué te está atando antes de intentar soltarlo."
+      "consejo": "Identifica qué te está atando antes de intentar soltarlo."
     },
     {
       "numero": 16,
       "nombre": "La Torre",
+      "iconografia_marsella": "Una torre alta de ladrillo rosado/carne con tres ventanas oscuras y una puerta inferior. En lo alto, un rayo o lengua de fuego multicolor (rojo, amarillo y azul) que desciende desde un sol blanco levanta la corona dorada de la cima, mientras caen círculos o chispas rojas, azules y blancas alrededor. Dos figuras humanas vestidas de rojo y azul caen cabeza abajo fuera de la torre sobre un suelo con hierbas.",
       "palabras_clave": ["ruptura", "revelación súbita", "cambio abrupto", "caída de estructuras falsas", "shock"],
       "significado_general": "Representa una ruptura repentina de estructuras que ya no sostenían la realidad de la persona.",
       "aspecto_positivo": "Aunque disruptivo, permite liberarse de bases falsas y empezar sobre cimientos reales.",
@@ -261,11 +278,12 @@
         "futuro": "Un evento disruptivo que, aunque incómodo, abre paso a una base más real.",
         "familia": "Una revelación o conflicto que sacude la estructura familiar de forma repentina."
       },
-      "consejo": "Lo que se derrumba no era tan sólido como parecía; construí de nuevo sobre bases reales."
+      "consejo": "Lo que se derrumba no era tan sólido como parecía; construye de nuevo sobre bases reales."
     },
     {
       "numero": 17,
       "nombre": "La Estrella",
+      "iconografia_marsella": "Bajo un cielo con una gran estrella central amarilla y roja de dieciséis puntas rodeada de siete estrellas más pequeñas (amarillas, azules y rojas), una mujer desnuda de largo cabello azulado apoya una rodilla sobre el suelo amarillo. Sostiene dos jarras rojas, vertiendo agua azul de una hacia un arroyo/estanque y de la otra sobre la tierra; a la derecha, sobre un arbusto verde, un pequeño pájaro negro mira hacia ella.",
       "palabras_clave": ["esperanza", "sanación", "inspiración", "confianza", "renovación"],
       "significado_general": "Simboliza la esperanza después de una dificultad, un momento de calma, inspiración y sanación.",
       "aspecto_positivo": "Confianza renovada, claridad, sensación de que lo peor ya pasó.",
@@ -276,11 +294,12 @@
         "futuro": "Un panorama esperanzador, con buenas perspectivas si se mantiene la confianza.",
         "familia": "Sanación de heridas familiares antiguas o un momento de paz en el hogar."
       },
-      "consejo": "Confiá en el proceso de sanación, pero seguí dando pasos concretos."
+      "consejo": "Confía en el proceso de sanación, pero sigue dando pasos concretos."
     },
     {
       "numero": 18,
       "nombre": "La Luna",
+      "iconografia_marsella": "En lo alto brilla una luna con rostro humano de perfil dentro de un creciente, rodeada de rayos rojos, azules y amarillos, bajo la cual caen gotas de colores invertidas. En el plano medio se alzan dos torres cuadradas amarillas/ocres a izquierda y derecha; delante de ellas, dos perros (uno azul y otro color carne/amarillo) aúllan enfrentados mirando hacia lo alto. Abajo, dentro de un estanque de agua azul ondulada, emerge un cangrejo rojo/azul.",
       "palabras_clave": ["incertidumbre", "intuición", "ilusión", "subconsciente", "confusión"],
       "significado_general": "Representa lo que no está del todo claro: miedos, ilusiones, información oculta o el mundo emocional profundo.",
       "aspecto_positivo": "Conexión profunda con la intuición y el mundo emocional o simbólico.",
@@ -291,11 +310,12 @@
         "futuro": "Un período de incertidumbre donde no todo se ve con claridad todavía.",
         "familia": "Tensiones no habladas o miedos que afectan la dinámica familiar sin decirse abiertamente."
       },
-      "consejo": "No todo lo que sentís en este momento es tan real como parece; esperá más claridad antes de decidir."
+      "consejo": "No todo lo que sientes en este momento es tan real como parece; espera más claridad antes de decidir."
     },
     {
       "numero": 19,
       "nombre": "El Sol",
+      "iconografia_marsella": "En lo alto domina un gran sol dorado con rostro humano serio mirando al frente, rodeado de rayos rectos y ondulantes alternados (rojos, amarillos y azules) con trece gotas de colores que caen bajo él. Abajo, delante de un muro bajo de ladrillo rojo y amarillo sobre suelo verde y amarillo, dos niños casi desnudos con paños azules en la cintura están de pie abrazándose con cercanía.",
       "palabras_clave": ["éxito", "vitalidad", "claridad", "alegría", "plenitud"],
       "significado_general": "Simboliza claridad total, éxito, vitalidad y una energía positiva y expansiva.",
       "aspecto_positivo": "Logros, alegría genuina, resultados positivos y visibles.",
@@ -306,11 +326,12 @@
         "futuro": "Un panorama muy favorable, de logros y claridad.",
         "familia": "Armonía y alegría compartida dentro del núcleo familiar."
       },
-      "consejo": "Disfrutá este buen momento, y usalo como impulso para lo que sigue."
+      "consejo": "Disfruta este buen momento, y úsalo como impulso para lo que sigue."
     },
     {
       "numero": 20,
       "nombre": "El Juicio",
+      "iconografia_marsella": "En la parte superior, un ángel alado de cabello amarillo entre nubes azules y rojas rodeado de rayos dorados toca una trompeta dorada de la que cuelga un estandarte con una cruz roja. Abajo, una figura central desnuda y de espaldas emerge de un sepulcro azul con las manos juntas en oración, flanqueada a la izquierda por un hombre barbado y a la derecha por una mujer de cabello recogido que miran hacia arriba.",
       "palabras_clave": ["renacimiento", "llamado interior", "balance de vida", "despertar", "decisión final"],
       "significado_general": "Representa un llamado a evaluar el camino recorrido y tomar una decisión definitiva sobre el rumbo a seguir.",
       "aspecto_positivo": "Claridad para dejar atrás el pasado y asumir un nuevo propósito con conciencia.",
@@ -326,6 +347,7 @@
     {
       "numero": 21,
       "nombre": "El Mundo",
+      "iconografia_marsella": "En el centro, rodeada por una gran guirnalda ovalada de hojas verdes, azules y rojas atada arriba y abajo con cintas amarillas, danza una figura femenina desnuda cubierta parcialmente por una banda azul oscuro que cruza su cuerpo, sosteniendo una pequeña varita blanca/amarilla en la mano derecha. En las cuatro esquinas exteriores aparecen los cuatro seres simbólicos: arriba a la izquierda un ángel alado, arriba a la derecha un águila amarilla/azul, abajo a la izquierda un toro rojizo/pardo y abajo a la derecha un león dorado.",
       "palabras_clave": ["cierre pleno", "logro", "totalidad", "integración", "culminación"],
       "significado_general": "Simboliza la culminación exitosa de un ciclo, la sensación de plenitud e integración total.",
       "aspecto_positivo": "Logro completo, satisfacción, cierre positivo de una etapa importante.",
@@ -336,7 +358,7 @@
         "futuro": "Culminación exitosa de un proceso importante.",
         "familia": "Sensación de plenitud e integración dentro del núcleo familiar."
       },
-      "consejo": "Reconocé el ciclo que estás cerrando antes de empezar el siguiente."
+      "consejo": "Reconoce el ciclo que estás cerrando antes de empezar el siguiente."
     }
   ]
 }

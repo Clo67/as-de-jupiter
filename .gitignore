@@ -14,6 +14,8 @@ coverage/
 .env.*.local
 .env*
 !.env.example
+.as_jupiter_dev_session_secret
+*.secret
 
 # Logs
 logs

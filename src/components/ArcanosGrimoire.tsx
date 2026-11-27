@@ -63,9 +63,10 @@ export const ArcanosGrimoire: React.FC = () => {
               numero={carta.numero}
               nombre={carta.nombre}
               detalle={carta}
+              lazy={true}
               size="sm"
             />
-            <span className="font-cinzel text-xs font-bold text-[#E0D8C8] mt-2 line-clamp-1 group-hover:text-[#D4AF37] transition-colors">
+            <span className="font-cinzel text-[11px] sm:text-xs font-bold text-[#E0D8C8] mt-2.5 leading-snug min-h-[2.25rem] flex items-center justify-center text-center break-words group-hover:text-[#D4AF37] transition-colors px-0.5">
               {NUMEROS_ROMANOS[carta.numero]}. {carta.nombre}
             </span>
             <div className="flex flex-wrap justify-center gap-1 mt-1">

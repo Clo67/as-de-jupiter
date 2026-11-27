@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
   return {
-    base: '/as-de-jupiter/',
+    base: '/',
     plugins: [
       react(),
       tailwindcss(),
@@ -14,7 +14,7 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         includeAssets: ['icon.svg', 'manifest.json'],
         manifest: {
-          id: '/as-de-jupiter/',
+          id: '/',
           name: 'As de Júpiter - Luna Tarot',
           short_name: 'As Júpiter',
           description: 'Lecturas simbólicas y reflexivas de Tarot de Marsella con Luna, tarotista de IA.',
@@ -22,17 +22,17 @@ export default defineConfig(() => {
           background_color: '#0A0712',
           display: 'standalone',
           orientation: 'portrait',
-          start_url: '/as-de-jupiter/',
-          scope: '/as-de-jupiter/',
+          start_url: '/',
+          scope: '/',
           icons: [
             {
-              src: '/as-de-jupiter/icon.svg',
+              src: '/icon.svg',
               sizes: '192x192 512x512',
               type: 'image/svg+xml',
               purpose: 'any',
             },
             {
-              src: '/as-de-jupiter/icon.svg',
+              src: '/icon.svg',
               sizes: '512x512',
               type: 'image/svg+xml',
               purpose: 'maskable',
@@ -40,7 +40,7 @@ export default defineConfig(() => {
           ],
         },
         devOptions: {
-          enabled: true,
+          enabled: false,
         },
       }),
     ],

@@ -63,3 +63,14 @@ export function obtenerCartaPorNombre(nombre: string): CartaConocimiento | undef
   const norm = nombre.toLowerCase().trim();
   return TODAS_LAS_CARTAS.find(c => c.nombre.toLowerCase().trim() === norm || norm.includes(c.nombre.toLowerCase().trim()));
 }
+
+export function formatConsejoCartaTitulo(nombre: string): string {
+  const trimmed = nombre.trim();
+  if (trimmed.startsWith('El ')) {
+    return `Consejo del ${trimmed.slice(3)}`;
+  }
+  if (trimmed.startsWith('La ')) {
+    return `Consejo de la ${trimmed.slice(3)}`;
+  }
+  return `Consejo de ${trimmed}`;
+}

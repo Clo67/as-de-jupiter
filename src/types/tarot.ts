@@ -3,6 +3,7 @@ export type TarotTema = 'amor' | 'dinero' | 'futuro' | 'familia';
 export interface CartaConocimiento {
   numero: number;
   nombre: string;
+  iconografia_marsella: string;
   palabras_clave: string[];
   significado_general: string;
   aspecto_positivo: string;
@@ -35,6 +36,7 @@ export interface CartaGratisResponse {
     nombre: string;
   };
   interpretacion_breve: string;
+  simbolo_clave: string;
 }
 
 export interface CartaEnTirada {
@@ -42,9 +44,13 @@ export interface CartaEnTirada {
   numero: number;
   nombre: string;
   interpretacion: string;
+  simbolo_clave: string;
 }
 
 export interface LecturaTresCartasResponse {
+  tiradaId?: string;
+  tiradasRestantesHoy?: number;
+  mensajesRestantes?: number;
   cartas: CartaEnTirada[];
   cierre_narrativo: string;
 }
@@ -56,8 +62,20 @@ export interface CartaNuevaChat {
 }
 
 export interface ChatConsultaResponse {
+  tiradaId?: string;
+  mensajesUsados?: number;
+  mensajesRestantes?: number;
   respuesta: string;
   cartas_nuevas?: CartaNuevaChat[];
+}
+
+export interface BuyerSessionState {
+  loading: boolean;
+  unlocked: boolean;
+  isTestBuyer: boolean;
+  tiradasRestantesHoy: number | null;
+  maxTiradasPorDia: number;
+  maxMensajesPorTirada: number;
 }
 
 export type TipoTirada = 'carta_gratis' | 'tres_cartas' | 'chat';

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, MessageSquare, ArrowRight, RotateCcw, AlertCircle, Quote, Compass } from 'lucide-react';
+import { Sparkles, MessageSquare, ArrowRight, RotateCcw, AlertCircle, Quote, Compass, Eye } from 'lucide-react';
 import { TarotTema, CartaGratisResponse, CartaConocimiento } from '../types/tarot';
 import { ThemeSelector } from './ThemeSelector';
 import { TarotCardVisual } from './TarotCardVisual';
+import { ShuffleAnimation } from './ShuffleAnimation';
+import { formatConsejoCartaTitulo } from '../data/cartas';
 import { postTarotApi, TarotApiError, LUNA_FRIENDLY_ERROR } from '../services/tarotApi';
 
 interface FreeCardReadingProps {
@@ -23,6 +25,17 @@ export const FreeCardReading: React.FC<FreeCardReadingProps> = ({
   const [resultado, setResultado] = useState<CartaGratisResponse | null>(null);
   const [cartaDetalle, setCartaDetalle] = useState<CartaConocimiento | null>(null);
   const [showFullDetails, setShowFullDetails] = useState(false);
+  const [cardRevealed, setCardRevealed] = useState(false);
+
+  useEffect(() => {
+    if (!resultado) {
+      setCardRevealed(false);
+      return;
+    }
+    setCardRevealed(false);
+    const timer = setTimeout(() => setCardRevealed(true), 140);
+    return () => clearTimeout(timer);
+  }, [resultado]);
 
   const executeFreeReading = async () => {
     setIsLoading(true);
@@ -30,16 +43,21 @@ export const FreeCardReading: React.FC<FreeCardReadingProps> = ({
     setIsRateLimitError(false);
     setResultado(null);
     setCartaDetalle(null);
+    setCardRevealed(false);
 
     try {
-      const data = await postTarotApi<{
-        success: boolean;
-        data: CartaGratisResponse;
-        cartaDetalle: CartaConocimiento | null;
-      }>('/api/tarot/carta-gratis', {
-        tema,
-        pregunta: pregunta.trim() || undefined,
-      });
+      const minShuffleDelay = new Promise((resolve) => setTimeout(resolve, 1500));
+      const [data] = await Promise.all([
+        postTarotApi<{
+          success: boolean;
+          data: CartaGratisResponse;
+          cartaDetalle: CartaConocimiento | null;
+        }>('/api/tarot/carta-gratis', {
+          tema,
+          pregunta: pregunta.trim() || undefined,
+        }),
+        minShuffleDelay,
+      ]);
 
       setResultado(data.data);
       setCartaDetalle(data.cartaDetalle);
@@ -82,7 +100,7 @@ export const FreeCardReading: React.FC<FreeCardReadingProps> = ({
               Consulta de una Carta con Luna
             </h2>
             <p className="text-[#E0D8C8]/70 text-sm mt-1.5 max-w-xl font-serif leading-relaxed">
-              Luna conecta con la vibración de tu consulta y siente cuál de los 22 Arcanos Mayores del Tarot de Marsella responde a tu inquietud en 3 a 4 líneas esenciales.
+              Se mezclan los 22 Arcanos Mayores del Tarot de Marsella y sale una carta al azar. Luna la interpreta para tu pregunta en 3 a 4 líneas esenciales.
             </p>
           </div>
           <div className="text-right hidden sm:block">
@@ -130,7 +148,7 @@ export const FreeCardReading: React.FC<FreeCardReadingProps> = ({
                 className="w-full bg-black/40 border border-[#D4AF37]/30 rounded-xl px-4 py-3 text-[#E0D8C8] placeholder-[#E0D8C8]/30 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 focus:border-[#D4AF37] transition-all resize-none font-serif"
               />
               <p className="text-xs text-[#E0D8C8]/50 flex items-center justify-between font-mono text-[11px]">
-                <span>Luna no usa un generador al azar: siente las cartas según la vibración de tu consulta.</span>
+                <span>Las cartas se mezclan y se eligen al azar, como en una tirada real. Luna las interpreta a la luz de tu pregunta.</span>
                 <span>{pregunta.length}/300</span>
               </p>
             </div>
@@ -144,7 +162,16 @@ export const FreeCardReading: React.FC<FreeCardReadingProps> = ({
                     <p className="text-xs text-red-200/90 mt-0.5">{error}</p>
                   </div>
                 </div>
-                {!isRateLimitError && (
+                {isRateLimitError ? (
+                  <button
+                    type="button"
+                    onClick={onGoToThreeCards}
+                    className="self-start sm:self-center px-3.5 py-2 rounded-lg bg-[#D4AF37] hover:bg-[#c49f2c] text-black text-xs font-cinzel font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer flex-shrink-0 shadow-md"
+                  >
+                    <span>Tirada de 3 Cartas</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
                   <button
                     type="button"
                     onClick={executeFreeReading}
@@ -158,6 +185,8 @@ export const FreeCardReading: React.FC<FreeCardReadingProps> = ({
               </div>
             )}
 
+            {isLoading && <ShuffleAnimation cantidad={1} />}
+
             <button
               id="submit-free-card-btn"
               type="submit"
@@ -167,7 +196,7 @@ export const FreeCardReading: React.FC<FreeCardReadingProps> = ({
               {isLoading ? (
                 <>
                   <Compass className="w-5 h-5 animate-spin text-black" />
-                  <span>Luna está consagrando el espacio y sintiendo las cartas...</span>
+                  <span>Mezclando las cartas al azar...</span>
                 </>
               ) : (
                 <>
@@ -194,7 +223,7 @@ export const FreeCardReading: React.FC<FreeCardReadingProps> = ({
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#D4AF37] animate-ping" />
                 <span className="font-cinzel text-xs uppercase tracking-[0.2em] text-[#D4AF37]">
-                  Arcano Manifestado
+                  Arcano Sorteado
                 </span>
               </div>
               <button
@@ -215,6 +244,7 @@ export const FreeCardReading: React.FC<FreeCardReadingProps> = ({
                   numero={resultado.carta.numero}
                   nombre={resultado.carta.nombre}
                   detalle={cartaDetalle}
+                  isRevealed={cardRevealed}
                   size="lg"
                 />
               </div>
@@ -233,12 +263,25 @@ export const FreeCardReading: React.FC<FreeCardReadingProps> = ({
                   </p>
                 </div>
 
+                {/* Educational clue: Para que lo reconozcas la próxima vez */}
+                {resultado.simbolo_clave && (
+                  <div className="bg-[#2A2050]/45 border border-[#D4AF37]/30 rounded-xl p-4 space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs font-cinzel text-[#D4AF37] uppercase tracking-wider font-semibold">
+                      <Eye className="w-3.5 h-3.5 text-[#D4AF37]" />
+                      <span>Para que lo reconozcas la próxima vez</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-[#E0D8C8]/90 font-serif leading-relaxed">
+                      {resultado.simbolo_clave}
+                    </p>
+                  </div>
+                )}
+
                 {/* Card advice from Marseille knowledge base */}
                 {cartaDetalle && (
                   <div className="bg-[#151025]/80 border border-[#D4AF37]/20 rounded-xl p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-cinzel text-[#D4AF37] uppercase tracking-wider">
-                        Consejo de {cartaDetalle.nombre}
+                        {formatConsejoCartaTitulo(cartaDetalle.nombre)}
                       </span>
                       <button
                         type="button"

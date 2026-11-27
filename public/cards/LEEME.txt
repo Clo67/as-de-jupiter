@@ -1,0 +1,29 @@
+Carpeta para las imágenes reales de los 22 Arcanos Mayores del Tarot de Marsella.
+
+Nombres de archivo requeridos (en formato .jpg):
+00.jpg - El Loco
+01.jpg - El Mago
+02.jpg - La Papisa
+03.jpg - La Emperatriz
+04.jpg - El Emperador
+05.jpg - El Papa
+06.jpg - El Enamorado
+07.jpg - El Carro
+08.jpg - La Justicia
+09.jpg - El Ermitaño
+10.jpg - La Rueda de la Fortuna
+11.jpg - La Fuerza
+12.jpg - El Colgado
+13.jpg - El Arcano Sin Nombre
+14.jpg - La Templanza
+15.jpg - El Diablo
+16.jpg - La Torre
+17.jpg - La Estrella
+18.jpg - La Luna
+19.jpg - El Sol
+20.jpg - El Juicio
+21.jpg - El Mundo
+
+Recomendación para carga rápida:
+- Tamaño recomendado: 500 x 860 px (proporción vertical ~1:1.72)
+- Peso máximo recomendado: 120 a 150 KB por archivo (JPG calidad 80-85%)

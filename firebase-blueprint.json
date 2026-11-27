@@ -1,0 +1,105 @@
+{
+  "entities": {
+    "Compra": {
+      "title": "Compra",
+      "description": "Registro de una compra pagada en Impultienda para acceso completo de por vida a As de Júpiter",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email del comprador en minúsculas",
+          "maxLength": 254
+        },
+        "pedido": {
+          "type": "string",
+          "description": "Número de pedido confirmado por Impultienda",
+          "maxLength": 100
+        },
+        "fecha": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Fecha y hora ISO de registro de la compra",
+          "maxLength": 64
+        },
+        "estado": {
+          "type": "string",
+          "enum": ["pagado", "aprobado"],
+          "description": "Estado confirmado del pago"
+        },
+        "producto": {
+          "type": "string",
+          "description": "Nombre o identificador del producto comprado",
+          "maxLength": 200
+        }
+      },
+      "required": ["email", "pedido", "fecha", "estado"]
+    },
+    "UsoDiario": {
+      "title": "UsoDiario",
+      "description": "Contador diario de tiradas de 3 cartas por comprador (máximo 5 por día)",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254
+        },
+        "fechaDia": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "maxLength": 10
+        },
+        "tiradasTresCartas": {
+          "type": "integer"
+        },
+        "actualizadoEn": {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 64
+        }
+      },
+      "required": ["email", "fechaDia", "tiradasTresCartas"]
+    },
+    "SesionChat": {
+      "title": "SesionChat",
+      "description": "Contador de consultas de seguimiento en Chat con Luna por cada tirada (máximo 10 mensajes)",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254
+        },
+        "tiradaId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "mensajesUsados": {
+          "type": "integer"
+        },
+        "actualizadoEn": {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 64
+        }
+      },
+      "required": ["email", "tiradaId", "mensajesUsados"]
+    }
+  },
+  "firestore": {
+    "/compras/{compraId}": {
+      "schema": { "$ref": "#/entities/Compra" },
+      "description": "Compras aprobadas de Impultienda; accesible únicamente desde el servidor"
+    },
+    "/uso_diario/{usoId}": {
+      "schema": { "$ref": "#/entities/UsoDiario" },
+      "description": "Contadores diarios por comprador; accesible únicamente desde el servidor"
+    },
+    "/sesiones_chat/{sesionId}": {
+      "schema": { "$ref": "#/entities/SesionChat" },
+      "description": "Contadores de mensajes de chat por tirada; accesible únicamente desde el servidor"
+    }
+  }
+}

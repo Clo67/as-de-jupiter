@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from './components/Header';
 import { FreeCardReading } from './components/FreeCardReading';
 import { ThreeCardReading } from './components/ThreeCardReading';
 import { LunaChat } from './components/LunaChat';
 import { ArcanosGrimoire } from './components/ArcanosGrimoire';
-import { LunaConfigViewerModal } from './components/LunaConfigViewerModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import { TarotTema, TipoTirada } from './types/tarot';
-import { ShieldCheck, Sparkles, Moon, Star } from 'lucide-react';
+import { UnlockedSessionPayload } from './components/PaywallGate';
+import { BuyerSessionState, TarotTema, TipoTirada } from './types/tarot';
+import { getTarotApi, postTarotApi } from './services/tarotApi';
+import { ShieldCheck } from 'lucide-react';
+
+const INITIAL_SESSION: BuyerSessionState = {
+  loading: true,
+  unlocked: false,
+  isTestBuyer: false,
+  tiradasRestantesHoy: null,
+  maxTiradasPorDia: 5,
+  maxMensajesPorTirada: 10,
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TipoTirada | 'grimoire'>('carta_gratis');
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [session, setSession] = useState<BuyerSessionState>(INITIAL_SESSION);
+  const [activationNotice, setActivationNotice] = useState<string | null>(null);
 
   // Active reading context passed into Chat
   const [sessionTema, setSessionTema] = useState<TarotTema>('futuro');
@@ -19,6 +30,74 @@ export default function App() {
   const [sessionCartas, setSessionCartas] = useState<
     Array<{ numero: number; nombre: string; posicion?: string }>
   >([]);
+  const [sessionTiradaId, setSessionTiradaId] = useState<string | undefined>(undefined);
+  const [sessionMensajesRestantes, setSessionMensajesRestantes] = useState<number>(10);
+  const [chatSessionKey, setChatSessionKey] = useState<number>(0);
+
+  const refreshSession = useCallback(async () => {
+    try {
+      const data = await getTarotApi<UnlockedSessionPayload>('/api/auth/session');
+      setSession({
+        loading: false,
+        unlocked: Boolean(data.unlocked),
+        isTestBuyer: Boolean(data.isTestBuyer),
+        tiradasRestantesHoy:
+          typeof data.tiradasRestantesHoy === 'number' ? data.tiradasRestantesHoy : null,
+        maxTiradasPorDia: data.maxTiradasPorDia || 5,
+        maxMensajesPorTirada: data.maxMensajesPorTirada || 10,
+      });
+    } catch {
+      setSession((prev) => ({
+        ...prev,
+        loading: false,
+        unlocked: false,
+      }));
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSession();
+  }, [refreshSession]);
+
+  const handleUnlocked = (payload: UnlockedSessionPayload) => {
+    setSession({
+      loading: false,
+      unlocked: Boolean(payload.unlocked),
+      isTestBuyer: Boolean(payload.isTestBuyer),
+      tiradasRestantesHoy:
+        typeof payload.tiradasRestantesHoy === 'number' ? payload.tiradasRestantesHoy : 5,
+      maxTiradasPorDia: payload.maxTiradasPorDia || 5,
+      maxMensajesPorTirada: payload.maxMensajesPorTirada || 10,
+    });
+    setActivationNotice('¡Listo! Tu acceso está activo');
+    setActiveTab('tres_cartas');
+  };
+
+  const handleSessionExpired = () => {
+    setSession((prev) => ({
+      ...prev,
+      loading: false,
+      unlocked: false,
+      isTestBuyer: false,
+      tiradasRestantesHoy: null,
+    }));
+  };
+
+  const handleLogout = async () => {
+    try {
+      await postTarotApi('/api/auth/logout', {});
+    } catch {
+      // Limpiar estado local igualmente
+    }
+    handleSessionExpired();
+  };
+
+  const handleUpdateRemainingSpreads = (remaining: number) => {
+    setSession((prev) => ({
+      ...prev,
+      tiradasRestantesHoy: remaining,
+    }));
+  };
 
   const handleStartChatFromFreeCard = (
     tema: TarotTema,
@@ -34,23 +113,34 @@ export default function App() {
         posicion: 'Carta Gratis Revelada',
       },
     ]);
+    setSessionTiradaId(undefined);
+    setSessionMensajesRestantes(session.maxMensajesPorTirada);
+    setChatSessionKey((prev) => prev + 1);
     setActiveTab('chat');
   };
 
   const handleStartChatFromThreeCards = (
     tema: TarotTema,
     pregunta: string,
-    cartas: Array<{ numero: number; nombre: string; posicion?: string }>
+    cartas: Array<{ numero: number; nombre: string; posicion?: string }>,
+    tiradaId?: string,
+    mensajesRestantes?: number
   ) => {
     setSessionTema(tema);
     setSessionPregunta(pregunta);
     setSessionCartas(cartas);
+    setSessionTiradaId(tiradaId);
+    setSessionMensajesRestantes(mensajesRestantes ?? session.maxMensajesPorTirada);
+    setChatSessionKey((prev) => prev + 1);
     setActiveTab('chat');
   };
 
   const handleClearChatSession = () => {
     setSessionCartas([]);
     setSessionPregunta('');
+    setSessionTiradaId(undefined);
+    setSessionMensajesRestantes(session.maxMensajesPorTirada);
+    setChatSessionKey((prev) => prev + 1);
   };
 
   return (
@@ -69,7 +159,8 @@ export default function App() {
       <Header
         activeTab={activeTab}
         onSelectTab={setActiveTab}
-        onOpenConfigModal={() => setIsConfigModalOpen(true)}
+        unlocked={session.unlocked}
+        onLogout={handleLogout}
       />
 
       {/* Main Container */}
@@ -83,15 +174,28 @@ export default function App() {
 
         {activeTab === 'tres_cartas' && (
           <ThreeCardReading
+            session={session}
+            activationNotice={activationNotice}
+            onDismissActivationNotice={() => setActivationNotice(null)}
+            onUnlocked={handleUnlocked}
+            onSessionExpired={handleSessionExpired}
+            onUpdateRemainingSpreads={handleUpdateRemainingSpreads}
             onStartChatWithReading={handleStartChatFromThreeCards}
           />
         )}
 
         {activeTab === 'chat' && (
           <LunaChat
+            key={chatSessionKey}
+            session={session}
             tema={sessionTema}
             preguntaInicial={sessionPregunta}
             cartasPrevias={sessionCartas}
+            tiradaId={sessionTiradaId}
+            initialMensajesRestantes={sessionMensajesRestantes}
+            onUnlocked={handleUnlocked}
+            onSessionExpired={handleSessionExpired}
+            onGoToThreeCards={() => setActiveTab('tres_cartas')}
             onClearSession={handleClearChatSession}
           />
         )}
@@ -111,25 +215,12 @@ export default function App() {
           </p>
           <div className="pt-2 text-[10px] text-[#D4AF37]/60 flex items-center justify-center gap-4 uppercase tracking-wider font-mono">
             <span>As de Júpiter © 2026</span>
-            <span>•</span>
-            <button
-              onClick={() => setIsConfigModalOpen(true)}
-              className="text-[#D4AF37] hover:underline cursor-pointer transition-colors"
-            >
-              Configuración de IA (lunaConfig.ts)
-            </button>
           </div>
         </div>
       </footer>
 
       {/* Offline Connectivity Indicator */}
       <OfflineIndicator />
-
-      {/* Config Viewer Modal */}
-      <LunaConfigViewerModal
-        isOpen={isConfigModalOpen}
-        onClose={() => setIsConfigModalOpen(false)}
-      />
     </div>
   );
 }

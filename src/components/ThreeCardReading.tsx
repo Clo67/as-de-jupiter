@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, MessageSquare, RotateCcw, AlertCircle, Compass, Scroll, Layers } from 'lucide-react';
-import { TarotTema, LecturaTresCartasResponse } from '../types/tarot';
+import { Sparkles, MessageSquare, RotateCcw, AlertCircle, Compass, Scroll, Layers, Eye, CheckCircle2, X } from 'lucide-react';
+import { TarotTema, LecturaTresCartasResponse, BuyerSessionState } from '../types/tarot';
 import { ThemeSelector } from './ThemeSelector';
 import { TarotCardVisual } from './TarotCardVisual';
+import { ShuffleAnimation } from './ShuffleAnimation';
+import { PaywallGate, UnlockedSessionPayload } from './PaywallGate';
 import { postTarotApi, TarotApiError, LUNA_FRIENDLY_ERROR } from '../services/tarotApi';
 
 interface ThreeCardReadingProps {
+  session: BuyerSessionState;
+  activationNotice?: string | null;
+  onDismissActivationNotice?: () => void;
+  onUnlocked: (payload: UnlockedSessionPayload) => void;
+  onSessionExpired: () => void;
+  onUpdateRemainingSpreads: (remaining: number) => void;
   onStartChatWithReading: (
     tema: TarotTema,
     pregunta: string,
-    cartas: Array<{ numero: number; nombre: string; posicion?: string }>
+    cartas: Array<{ numero: number; nombre: string; posicion?: string }>,
+    tiradaId?: string,
+    mensajesRestantes?: number
   ) => void;
 }
 
@@ -33,6 +43,12 @@ const ESQUEMAS_POSICIONES = [
 ];
 
 export const ThreeCardReading: React.FC<ThreeCardReadingProps> = ({
+  session,
+  activationNotice,
+  onDismissActivationNotice,
+  onUnlocked,
+  onSessionExpired,
+  onUpdateRemainingSpreads,
   onStartChatWithReading,
 }) => {
   const [tema, setTema] = useState<TarotTema>('futuro');
@@ -43,6 +59,25 @@ export const ThreeCardReading: React.FC<ThreeCardReadingProps> = ({
   const [isRateLimitError, setIsRateLimitError] = useState(false);
   const [resultado, setResultado] = useState<LecturaTresCartasResponse | null>(null);
   const [activeCardIndex, setActiveCardIndex] = useState<number>(0);
+  const [revealedCards, setRevealedCards] = useState<boolean[]>([false, false, false]);
+
+  useEffect(() => {
+    if (!resultado) {
+      setRevealedCards([false, false, false]);
+      return;
+    }
+    setRevealedCards([false, false, false]);
+    const timers = [140, 360, 580].map((delayMs, idx) =>
+      setTimeout(() => {
+        setRevealedCards((prev) => {
+          const next = [...prev];
+          next[idx] = true;
+          return next;
+        });
+      }, delayMs)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [resultado]);
 
   const executeThreeCardReading = async () => {
     setIsLoading(true);
@@ -50,22 +85,38 @@ export const ThreeCardReading: React.FC<ThreeCardReadingProps> = ({
     setIsRateLimitError(false);
     setResultado(null);
     setActiveCardIndex(0);
+    setRevealedCards([false, false, false]);
 
-    const posiciones = ESQUEMAS_POSICIONES[esquemaIndex].posiciones;
+    const esquemaId = ESQUEMAS_POSICIONES[esquemaIndex].id;
 
     try {
-      const data = await postTarotApi<{
-        success: boolean;
-        data: LecturaTresCartasResponse;
-      }>('/api/tarot/lectura-tres-cartas', {
-        tema,
-        pregunta: pregunta.trim() || undefined,
-        posiciones,
-      });
+      const minShuffleDelay = new Promise((resolve) => setTimeout(resolve, 1500));
+      const [data] = await Promise.all([
+        postTarotApi<{
+          success: boolean;
+          data: LecturaTresCartasResponse;
+        }>(
+          '/api/tarot/lectura-tres-cartas',
+          {
+            tema,
+            pregunta: pregunta.trim() || undefined,
+            esquemaId,
+          },
+          { timeoutMs: 60000 }
+        ),
+        minShuffleDelay,
+      ]);
 
       setResultado(data.data);
+      if (typeof data.data.tiradasRestantesHoy === 'number') {
+        onUpdateRemainingSpreads(data.data.tiradasRestantesHoy);
+      }
     } catch (err: unknown) {
       if (err instanceof TarotApiError) {
+        if (err.isAuthRequired) {
+          onSessionExpired();
+          return;
+        }
         setError(err.message);
         setIsRateLimitError(err.isRateLimit);
       } else {
@@ -87,8 +138,43 @@ export const ThreeCardReading: React.FC<ThreeCardReadingProps> = ({
     setIsRateLimitError(false);
   };
 
+  if (session.loading) {
+    return (
+      <div className="w-full max-w-3xl mx-auto py-16 flex flex-col items-center justify-center gap-3 text-[#D4AF37]">
+        <Compass className="w-7 h-7 animate-spin" />
+        <span className="font-cinzel text-xs uppercase tracking-[0.2em]">Verificando tu acceso...</span>
+      </div>
+    );
+  }
+
+  if (!session.unlocked) {
+    return <PaywallGate feature="tres_cartas" onUnlocked={onUnlocked} />;
+  }
+
   return (
     <div id="three-cards-section" className="w-full max-w-5xl mx-auto space-y-6">
+      {activationNotice && (
+        <div
+          id="access-active-banner"
+          className="bg-emerald-950/60 border border-emerald-400/50 text-emerald-100 rounded-xl px-4 py-3 flex items-center justify-between gap-3 shadow-lg"
+        >
+          <div className="flex items-center gap-2.5 text-sm font-cinzel">
+            <CheckCircle2 className="w-5 h-5 text-emerald-300 flex-shrink-0" />
+            <span>{activationNotice} — Ya puedes realizar tu Tirada Completa de 3 Cartas y usar el Chat con Luna.</span>
+          </div>
+          {onDismissActivationNotice && (
+            <button
+              type="button"
+              onClick={onDismissActivationNotice}
+              aria-label="Cerrar aviso"
+              className="text-emerald-200/70 hover:text-white cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Intro Header */}
       <div className="bg-gradient-to-r from-[#151025]/95 via-[#1A1435]/95 to-[#151025]/95 border border-[#D4AF37]/30 rounded-2xl p-6 sm:p-7 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-[radial-gradient(circle_at_center,_rgba(212,175,55,0.1)_0%,_transparent_70%)] rounded-full blur-2xl pointer-events-none" />
@@ -102,15 +188,17 @@ export const ThreeCardReading: React.FC<ThreeCardReadingProps> = ({
               Tirada Narrativa de 3 Posiciones con Luna
             </h2>
             <p className="text-[#E0D8C8]/70 text-sm mt-1.5 max-w-2xl font-serif leading-relaxed">
-              Luna despliega tres Arcanos Mayores distintos, tejiendo una interpretación detallada para cada posición y un cierre integrador con consejo práctico.
+              Se mezclan los 22 Arcanos Mayores al azar y salen tres cartas distintas para tu tirada. Luna las interpreta en cada posición y te ofrece un cierre integrador con consejo práctico.
             </p>
           </div>
-          <div className="text-right hidden sm:block">
+          <div className="text-left sm:text-right">
             <span className="text-xs text-[#D4AF37]/70 uppercase tracking-[0.2em] font-cinzel block">
-              Sin Repeticiones
+              Acceso Activo
             </span>
             <span className="text-sm font-semibold text-[#D4AF37]">
-              Cierre Narrativo Completo
+              {session.tiradasRestantesHoy !== null
+                ? `Hoy: ${session.tiradasRestantesHoy} de ${session.maxTiradasPorDia} tiradas`
+                : 'Cierre Narrativo Completo'}
             </span>
           </div>
         </div>
@@ -204,6 +292,8 @@ export const ThreeCardReading: React.FC<ThreeCardReadingProps> = ({
               </div>
             )}
 
+            {isLoading && <ShuffleAnimation cantidad={3} />}
+
             <button
               id="submit-three-cards-btn"
               type="submit"
@@ -213,7 +303,7 @@ export const ThreeCardReading: React.FC<ThreeCardReadingProps> = ({
               {isLoading ? (
                 <>
                   <Compass className="w-5 h-5 animate-spin text-black" />
-                  <span>Luna está consagrando el espacio y sintiendo las 3 cartas...</span>
+                  <span>Mezclando las 3 cartas al azar...</span>
                 </>
               ) : (
                 <>
@@ -276,6 +366,7 @@ export const ThreeCardReading: React.FC<ThreeCardReadingProps> = ({
                       nombre={c.nombre}
                       posicion={c.posicion}
                       detalle={(c as any).detalle}
+                      isRevealed={Boolean(revealedCards[idx])}
                       size="md"
                     />
                     <div className="w-full mt-4 p-3 bg-black/40 rounded-xl border border-[#D4AF37]/20 text-left">
@@ -319,6 +410,18 @@ export const ThreeCardReading: React.FC<ThreeCardReadingProps> = ({
                 <p className="text-white/95 text-base sm:text-lg leading-relaxed font-serif italic">
                   "{resultado.cartas[activeCardIndex].interpretacion}"
                 </p>
+
+                {resultado.cartas[activeCardIndex].simbolo_clave && (
+                  <div className="mt-3 pt-3 border-t border-[#D4AF37]/20 space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-cinzel text-[#D4AF37] uppercase tracking-wider font-semibold">
+                      <Eye className="w-3.5 h-3.5 text-[#D4AF37]" />
+                      <span>Para que lo reconozcas la próxima vez</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-[#E0D8C8]/90 font-serif leading-relaxed">
+                      {resultado.cartas[activeCardIndex].simbolo_clave}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -346,7 +449,9 @@ export const ThreeCardReading: React.FC<ThreeCardReadingProps> = ({
                         numero: c.numero,
                         nombre: c.nombre,
                         posicion: c.posicion,
-                      }))
+                      })),
+                      resultado.tiradaId,
+                      resultado.mensajesRestantes
                     )
                   }
                   className="py-3 px-6 rounded-xl bg-[#D4AF37] hover:bg-[#c49f2c] text-black font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-[0_0_20px_rgba(212,175,55,0.25)] cursor-pointer tracking-wider"

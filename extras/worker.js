@@ -1,3 +1,4 @@
+// No usado en producción; versión de respaldo para Cloudflare, puede estar desactualizada
 /**
  * As de Júpiter — Backend Proxy en Cloudflare Worker
  *
@@ -7,6 +8,8 @@
  */
 
 const ALLOWED_EXACT_ORIGINS = new Set([
+  'https://ais-pre-je5p43zcti47smd73hwmjw-681555613321.us-west2.run.app',
+  'https://ais-dev-je5p43zcti47smd73hwmjw-681555613321.us-west2.run.app',
   'https://clo67.github.io',
 ]);
 
@@ -22,38 +25,53 @@ const MODEL_CANDIDATES = [
   'gemini-3.1-flash-lite',
 ];
 
-const LUNA_SYSTEM_INSTRUCTION = `Sos Luna, la tarotista de IA de "As de Júpiter", una aplicación de lectura
+const ESQUEMAS_POSICIONES_SERVER = {
+  situacion_obstaculo_consejo: ['Situación actual', 'Obstáculo / Desafío', 'Consejo y rumbo'],
+  pasado_presente_futuro: ['Raíz o Pasado', 'Presente actual', 'Tendencia Futura'],
+  mente_corazon_accion: ['Lo que piensas (Mente)', 'Lo que sientes (Corazón)', 'Hacia dónde actuar'],
+};
+
+function resolverPosicionesServidor(esquemaId) {
+  if (typeof esquemaId === 'string' && ESQUEMAS_POSICIONES_SERVER[esquemaId]) {
+    return ESQUEMAS_POSICIONES_SERVER[esquemaId];
+  }
+  return ESQUEMAS_POSICIONES_SERVER.situacion_obstaculo_consejo;
+}
+
+const LUNA_SYSTEM_INSTRUCTION = `Eres Luna, la tarotista de IA de "As de Júpiter", una aplicación de lectura
 de Tarot de Marsella. Tu función es realizar lecturas simbólicas y
 reflexivas para acompañar a quien consulta, nunca predicciones garantizadas
 ni diagnósticos de ningún tipo.
 
-TONO Y VOZ: Hablás con una mezcla equilibrada de tres registros: calidez
+TONO Y VOZ: Hablas con una mezcla equilibrada de tres registros: calidez
 cercana (como una amiga sabia que escucha de verdad), un toque
 místico/ceremonial (sin caer en lo teatral ni sobrecargado de metáforas),
-y practicidad (siempre cerrás con algo concreto y accionable, no solo
-poesía). Te dirigís al consultante de tú (tuteo neutro, nunca vos ni
-usted). Evitás sonar genérica o como un horóscopo de revista: cada
-lectura debe sentirse dirigida a la pregunta específica que trajo la
-persona.
+y practicidad (siempre cierras con algo concreto y accionable, no solo
+poesía). Te diriges al consultante de tú (tuteo neutro, nunca vos ni
+usted). Nunca uses voseo rioplatense (cuidá, elegí, tenés); usa siempre
+tuteo neutro (cuida, elige, tienes). Evitas sonar genérica o como un horóscopo
+de revista: cada lectura debe sentirse dirigida a la pregunta específica que
+trajo la persona.
 
-BASE DE CONOCIMIENTO: Trabajás exclusivamente con los 22 Arcanos Mayores
-del Tarot de Marsella provistos en el archivo de datos de cartas. No usás
-arcanos menores, no inventás cartas fuera de esa lista, no contradecís el
-significado base de cada carta (podés adaptar lenguaje y énfasis, no el
+BASE DE CONOCIMIENTO: Trabajas exclusivamente con los 22 Arcanos Mayores
+del Tarot de Marsella provistos en el archivo de datos de cartas. No usas
+arcanos menores, no inventas cartas fuera de esa lista, no contradices el
+significado base de cada carta (puedes adaptar lenguaje y énfasis, no el
 núcleo del significado).
 
-CÓMO ELEGÍS LAS CARTAS: No usás un generador aleatorio externo. Elegís las
-cartas según la energía de la pregunta y el tema, como lo haría una
-tarotista real, en el mismo llamado en que hacés la interpretación. Nunca
-repitas mecánicamente la misma combinación para preguntas distintas.
-La elección debe tener sentido narrativo real. En tiradas de varias
-cartas, nunca repitas una misma carta dos veces.
+CÓMO TRABAJAS CON LAS CARTAS: Las cartas ya fueron sorteadas al azar, como al
+mezclar un mazo, y te llegan en el mensaje. No las cambies ni elijas otras.
+Tu tarea es interpretar esas cartas exactas en relación con el tema y la
+pregunta de quien consulta.
+No inventes plazos ni fechas (como 'este año', 'el próximo año', 'en tres meses')
+que la persona no mencionó en su pregunta. Si la pregunta no indica un tiempo,
+habla del momento presente y de los próximos pasos.
 
 TIPOS DE LECTURA:
-- CARTA GRATIS: 1 carta según el tema (amor/dinero/futuro/familia).
+- CARTA GRATIS: 1 carta sorteada al azar según el tema (amor/dinero/futuro/familia).
   Interpretación de 3 a 4 líneas máximo.
-- LECTURA DE 3 CARTAS (paga): interpretación desarrollada por posición,
-  más un cierre narrativo breve que conecta las tres cartas.
+- LECTURA DE 3 CARTAS (paga): interpretación desarrollada de las 3 cartas sorteadas
+  según sus posiciones, más un cierre narrativo breve que conecta las tres cartas.
 - CHAT DE CONSULTA (post-pago): responde preguntas de seguimiento,
   manteniendo coherencia con las cartas ya mostradas en la sesión.
 
@@ -76,14 +94,14 @@ const LUNA_SCHEMA_CARTA_GRATIS = {
     carta: {
       type: 'OBJECT',
       properties: {
-        numero: { type: 'INTEGER', description: 'Número del arcano mayor (0 al 21)' },
-        nombre: { type: 'STRING', description: 'Nombre exacto del arcano mayor' },
+        numero: { type: 'INTEGER', description: 'Número exacto del arcano mayor sorteado (0 al 21)' },
+        nombre: { type: 'STRING', description: 'Nombre exacto del arcano mayor sorteado' },
       },
       required: ['numero', 'nombre'],
     },
     interpretacion_breve: {
       type: 'STRING',
-      description: '3 a 4 líneas máximo, en el tono de Luna, respondiendo directamente al tema y pregunta del usuario.',
+      description: '3 a 4 líneas máximo, en el tono de Luna, interpretando la carta sorteada en relación directa con el tema y pregunta del usuario.',
     },
   },
   required: ['carta', 'interpretacion_breve'],
@@ -94,21 +112,21 @@ const LUNA_SCHEMA_TRES_CARTAS = {
   properties: {
     cartas: {
       type: 'ARRAY',
-      description: 'Exactamente 3 cartas para las 3 posiciones de la tirada, sin repetir ninguna carta',
+      description: 'Exactamente las 3 cartas sorteadas en el mismo orden y con las posiciones asignadas',
       items: {
         type: 'OBJECT',
         properties: {
-          posicion: { type: 'STRING', description: 'Nombre de la posición' },
-          numero: { type: 'INTEGER', description: 'Número del arcano mayor (0 al 21)' },
-          nombre: { type: 'STRING', description: 'Nombre exacto del arcano mayor' },
-          interpretacion: { type: 'STRING', description: 'Interpretación profunda y personalizada de la carta en esa posición' },
+          posicion: { type: 'STRING', description: 'Nombre exacto de la posición asignada por el servidor' },
+          numero: { type: 'INTEGER', description: 'Número exacto del arcano mayor sorteado (0 al 21)' },
+          nombre: { type: 'STRING', description: 'Nombre exacto del arcano mayor sorteado' },
+          interpretacion: { type: 'STRING', description: 'Interpretación profunda y personalizada de la carta sorteada en esa posición' },
         },
         required: ['posicion', 'numero', 'nombre', 'interpretacion'],
       },
     },
     cierre_narrativo: {
       type: 'STRING',
-      description: 'Párrafo breve que conecta las tres cartas como una historia coherente, cerrando con un consejo práctico.',
+      description: 'Párrafo breve que conecta las tres cartas sorteadas como una historia coherente, cerrando con un consejo práctico.',
     },
   },
   required: ['cartas', 'cierre_narrativo'],
@@ -123,13 +141,13 @@ const LUNA_SCHEMA_CHAT = {
     },
     cartas_nuevas: {
       type: 'ARRAY',
-      description: 'Cartas adicionales traídas solo si la consulta lo amerita genuinamente',
+      description: 'Solo la carta adicional sorteada si la consulta lo amerita genuinamente; de lo contrario, arreglo vacío []',
       items: {
         type: 'OBJECT',
         properties: {
-          numero: { type: 'INTEGER', description: 'Número del arcano mayor (0 al 21)' },
-          nombre: { type: 'STRING', description: 'Nombre exacto del arcano mayor' },
-          motivo: { type: 'STRING', description: 'Por qué aparece esta carta para complementar la respuesta' },
+          numero: { type: 'INTEGER', description: 'Número del arcano mayor sorteado (0 al 21)' },
+          nombre: { type: 'STRING', description: 'Nombre exacto del arcano mayor sorteado' },
+          motivo: { type: 'STRING', description: 'Por qué esta carta complementa la respuesta' },
         },
         required: ['numero', 'nombre'],
       },
@@ -152,7 +170,7 @@ const CARTAS_DATA = [
       futuro: 'Un camino abierto, múltiples posibilidades, pero sin dirección definida aún.',
       familia: 'Necesidad de independencia dentro del núcleo familiar, o un quiebre con lo tradicional.',
     },
-    consejo: 'Animate a dar el paso, pero mirá dónde pisás antes de saltar.',
+    consejo: 'Anímate a dar el paso, pero mira dónde pisas antes de saltar.',
   },
   {
     numero: 1,
@@ -163,11 +181,11 @@ const CARTAS_DATA = [
     aspecto_desafiante: 'Manipulación, dispersión, usar el talento sin ética o sin foco.',
     temas: {
       amor: 'Alguien que toma la iniciativa; capacidad de seducción o de construir algo nuevo con determinación.',
-      dinero: 'Momento favorable para emprender o concretar un plan financiero con los recursos que ya tenés.',
+      dinero: 'Momento favorable para emprender o concretar un plan financiero con los recursos que ya tienes.',
       futuro: 'Un período de acción concreta donde tus decisiones tienen peso real.',
       familia: 'Rol de quien organiza o toma las riendas dentro de la familia.',
     },
-    consejo: 'Tenés las herramientas necesarias; el paso siguiente es empezar.',
+    consejo: 'Tienes las herramientas necesarias; el paso siguiente es empezar.',
   },
   {
     numero: 2,
@@ -197,7 +215,7 @@ const CARTAS_DATA = [
       futuro: 'Un período fértil, de expansión y resultados tangibles.',
       familia: 'Rol maternal, cuidado del hogar, crecimiento del núcleo familiar.',
     },
-    consejo: 'Cuidá lo que estás construyendo, pero sin sofocarlo.',
+    consejo: 'Cuida lo que estás construyendo, pero sin sofocarlo.',
   },
   {
     numero: 4,
@@ -212,7 +230,7 @@ const CARTAS_DATA = [
       futuro: 'Consolidación de una base sólida; resultados que dependen del orden que impongas ahora.',
       familia: 'Figura paterna o de autoridad; reglas claras dentro del hogar.',
     },
-    consejo: 'Poné orden donde hace falta, sin volverte inflexible.',
+    consejo: 'Pon orden donde hace falta, sin volverte inflexible.',
   },
   {
     numero: 5,
@@ -227,7 +245,7 @@ const CARTAS_DATA = [
       futuro: 'Un camino guiado por convenciones o por el consejo de alguien con más experiencia.',
       familia: 'Tradiciones familiares, figura de referencia moral dentro del grupo.',
     },
-    consejo: 'Buscá consejo, pero no dejes de escuchar tu propio criterio.',
+    consejo: 'Busca consejo, pero no dejes de escuchar tu propio criterio.',
   },
   {
     numero: 6,
@@ -242,7 +260,7 @@ const CARTAS_DATA = [
       futuro: 'Un cruce de caminos donde la elección definirá el rumbo siguiente.',
       familia: 'Tensión entre lo que la familia espera y lo que la persona realmente quiere.',
     },
-    consejo: 'Elegí desde lo que realmente valorás, no desde lo que se espera de vos.',
+    consejo: 'Elige desde lo que realmente valoras, no desde lo que se espera de ti.',
   },
   {
     numero: 7,
@@ -257,7 +275,7 @@ const CARTAS_DATA = [
       futuro: 'Movimiento y avance concreto, un objetivo que se acerca si se mantiene el rumbo.',
       familia: 'Necesidad de equilibrar demandas familiares distintas sin perder el propio rumbo.',
     },
-    consejo: 'Mantené el foco en una sola dirección para no perder impulso.',
+    consejo: 'Mantén el foco en una sola dirección para no perder impulso.',
   },
   {
     numero: 8,
@@ -272,7 +290,7 @@ const CARTAS_DATA = [
       futuro: 'Un resultado justo, coherente con las acciones previas.',
       familia: 'Necesidad de resolver un conflicto familiar con equidad, sin favoritismos.',
     },
-    consejo: 'Mirá la situación con objetividad antes de decidir.',
+    consejo: 'Mira la situación con objetividad antes de decidir.',
   },
   {
     numero: 9,
@@ -287,7 +305,7 @@ const CARTAS_DATA = [
       futuro: 'Un período de reflexión que precede a la claridad.',
       familia: 'Necesidad de espacio propio dentro de la dinámica familiar.',
     },
-    consejo: 'Tomate el tiempo que necesites; la respuesta está más cerca de lo que creés.',
+    consejo: 'Tómate el tiempo que necesites; la respuesta está más cerca de lo que crees.',
   },
   {
     numero: 10,
@@ -302,7 +320,7 @@ const CARTAS_DATA = [
       futuro: 'Un cambio de ciclo se aproxima, distinto a la situación actual.',
       familia: 'Un evento que altera la dinámica habitual del grupo familiar.',
     },
-    consejo: 'Fluí con el cambio en lugar de resistirlo.',
+    consejo: 'Fluye con el cambio en lugar de resistirlo.',
   },
   {
     numero: 11,
@@ -347,7 +365,7 @@ const CARTAS_DATA = [
       futuro: 'Una transformación importante e ineludible se aproxima.',
       familia: 'Cambio estructural en la familia (mudanza, pérdida, reconfiguración de roles).',
     },
-    consejo: 'Dejá ir lo que ya cumplió su ciclo; resistirlo solo prolonga el malestar.',
+    consejo: 'Deja ir lo que ya cumplió su ciclo; resistirlo solo prolonga el malestar.',
   },
   {
     numero: 14,
@@ -377,7 +395,7 @@ const CARTAS_DATA = [
       futuro: 'Un patrón repetitivo que se mantendrá si no se hace un cambio consciente.',
       familia: 'Dinámicas de control o dependencia dentro del núcleo familiar.',
     },
-    consejo: 'Identificá qué te está atando antes de intentar soltarlo.',
+    consejo: 'Identifica qué te está atando antes de intentar soltarlo.',
   },
   {
     numero: 16,
@@ -392,7 +410,7 @@ const CARTAS_DATA = [
       futuro: 'Un evento disruptivo que, aunque incómodo, abre paso a una base más real.',
       familia: 'Una revelación o conflicto que sacude la estructura familiar de forma repentina.',
     },
-    consejo: 'Lo que se derrumba no era tan sólido como parecía; construí de nuevo sobre bases reales.',
+    consejo: 'Lo que se derrumba no era tan sólido como parecía; construye de nuevo sobre bases reales.',
   },
   {
     numero: 17,
@@ -407,7 +425,7 @@ const CARTAS_DATA = [
       futuro: 'Un panorama esperanzador, con buenas perspectivas si se mantiene la confianza.',
       familia: 'Sanación de heridas familiares antiguas o un momento de paz en el hogar.',
     },
-    consejo: 'Confiá en el proceso de sanación, pero seguí dando pasos concretos.',
+    consejo: 'Confía en el proceso de sanación, pero sigue dando pasos concretos.',
   },
   {
     numero: 18,
@@ -422,7 +440,7 @@ const CARTAS_DATA = [
       futuro: 'Un período de incertidumbre donde no todo se ve con claridad todavía.',
       familia: 'Tensiones no habladas o miedos que afectan la dinámica familiar sin decirse abiertamente.',
     },
-    consejo: 'No todo lo que sentís en este momento es tan real como parece; esperá más claridad antes de decidir.',
+    consejo: 'No todo lo que sientes en este momento es tan real como parece; espera más claridad antes de decidir.',
   },
   {
     numero: 19,
@@ -437,7 +455,7 @@ const CARTAS_DATA = [
       futuro: 'Un panorama muy favorable, de logros y claridad.',
       familia: 'Armonía y alegría compartida dentro del núcleo familiar.',
     },
-    consejo: 'Disfrutá este buen momento, y usalo como impulso para lo que sigue.',
+    consejo: 'Disfruta este buen momento, y úsalo como impulso para lo que sigue.',
   },
   {
     numero: 20,
@@ -467,7 +485,7 @@ const CARTAS_DATA = [
       futuro: 'Culminación exitosa de un proceso importante.',
       familia: 'Sensación de plenitud e integración dentro del núcleo familiar.',
     },
-    consejo: 'Reconocé el ciclo que estás cerrando antes de empezar el siguiente.',
+    consejo: 'Reconoce el ciclo que estás cerrando antes de empezar el siguiente.',
   },
 ];
 
@@ -562,42 +580,83 @@ function obtenerCartaPorNombre(nombre) {
   );
 }
 
+/**
+ * Entero aleatorio criptográfico uniforme en [0, maxExclusive - 1] con rejection sampling
+ */
+function cryptoRandomInt(maxExclusive) {
+  if (maxExclusive <= 1) return 0;
+  const maxUint32 = 0x100000000;
+  const limit = maxUint32 - (maxUint32 % maxExclusive);
+  const buf = new Uint32Array(1);
+  let value;
+  do {
+    crypto.getRandomValues(buf);
+    value = buf[0];
+  } while (value >= limit);
+  return value % maxExclusive;
+}
+
+/**
+ * Sorteo criptográfico real con Fisher-Yates sobre los 22 Arcanos Mayores (0..21)
+ */
+function sortearCartasFisherYates(cantidad, excluirNumeros = []) {
+  const excluidos = new Set(excluirNumeros);
+  const mazo = CARTAS_DATA.filter((c) => !excluidos.has(c.numero));
+  for (let i = mazo.length - 1; i > 0; i--) {
+    const j = cryptoRandomInt(i + 1);
+    const tmp = mazo[i];
+    mazo[i] = mazo[j];
+    mazo[j] = tmp;
+  }
+  return mazo.slice(0, cantidad);
+}
+
+function normalizeCardName(name) {
+  if (typeof name !== 'string') return '';
+  return name
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 function buildLunaPrompt({
   tipo,
   tema,
   pregunta,
-  esquemaPosiciones,
+  cartaSorteada,
+  cartasSorteadas,
   cartasPrevias,
+  cartaComplementariaSorteada,
   historialChat,
   nuevaPregunta,
 }) {
   let prompt = `BASE DE CONOCIMIENTO DE LAS 22 CARTAS (cartas_conocimiento.json):\n${KNOWLEDGE_BASE_JSON}\n\n`;
 
-  if (tipo === 'carta_gratis') {
-    prompt += `TIPO DE LECTURA: CARTA GRATIS (1 carta).
+  if (tipo === 'carta_gratis' && cartaSorteada) {
+    prompt += `TIPO DE LECTURA: CARTA GRATIS (1 carta ya sorteada al azar).
 TEMA ELEGIDO: ${String(tema || 'futuro').toUpperCase()}
 PREGUNTA DEL CONSULTANTE: ${pregunta && String(pregunta).trim() ? `"${String(pregunta).trim()}"` : 'Sin pregunta específica, lectura general sobre el tema.'}
+CARTA SORTEADA AL AZAR (NO LA CAMBIES):
+- Número: ${cartaSorteada.numero}
+- Nombre exacto: ${cartaSorteada.nombre}
 
 INSTRUCCIÓN ESPECÍFICA:
-1. Siente qué Arcano Mayor de los 22 corresponde a la energía de esta consulta.
-2. Devuelve el número y nombre exacto de la carta elegida.
-3. Proporciona una interpretación breve de 3 a 4 líneas máximo en tu tono característico (cálido, místico, práctico), respondiendo directamente al tema y pregunta del consultante.
+1. Interpreta EXCLUSIVAMENTE la carta sorteada (${cartaSorteada.numero} - ${cartaSorteada.nombre}). No la cambies ni elijas otra.
+2. Devuelve exactamente numero: ${cartaSorteada.numero} y nombre: "${cartaSorteada.nombre}".
+3. Proporciona una interpretación breve de 3 a 4 líneas máximo en tu tono característico (cálido, místico, práctico y en tuteo neutro), respondiendo directamente al tema y pregunta del consultante.
 4. Responde estrictamente en formato JSON según el schema.`;
-  } else if (tipo === 'tres_cartas') {
-    const posiciones =
-      Array.isArray(esquemaPosiciones) && esquemaPosiciones.length === 3
-        ? esquemaPosiciones
-        : ['Situación actual', 'Obstáculo / Desafío', 'Consejo y rumbo'];
-    prompt += `TIPO DE LECTURA: LECTURA DE 3 CARTAS.
+  } else if (tipo === 'tres_cartas' && Array.isArray(cartasSorteadas) && cartasSorteadas.length === 3) {
+    prompt += `TIPO DE LECTURA: LECTURA DE 3 CARTAS (ya sorteadas al azar por el servidor).
 TEMA ELEGIDO: ${String(tema || 'futuro').toUpperCase()}
 PREGUNTA DEL CONSULTANTE: ${pregunta && String(pregunta).trim() ? `"${String(pregunta).trim()}"` : 'Lectura general sobre el tema.'}
-POSICIONES DE LA TIRADA:
-1. ${posiciones[0]}
-2. ${posiciones[1]}
-3. ${posiciones[2]}
+CARTAS SORTEADAS Y POSICIONES ASIGNADAS (EN ESTE ORDEN EXACTO, NO LAS CAMBIES):
+1. Posición: "${cartasSorteadas[0].posicion}" -> Número: ${cartasSorteadas[0].carta.numero}, Nombre exacto: "${cartasSorteadas[0].carta.nombre}"
+2. Posición: "${cartasSorteadas[1].posicion}" -> Número: ${cartasSorteadas[1].carta.numero}, Nombre exacto: "${cartasSorteadas[1].carta.nombre}"
+3. Posición: "${cartasSorteadas[2].posicion}" -> Número: ${cartasSorteadas[2].carta.numero}, Nombre exacto: "${cartasSorteadas[2].carta.nombre}"
 
 INSTRUCCIÓN ESPECÍFICA:
-1. Siente y selecciona 3 cartas distintas (sin repetir ninguna) de los 22 Arcanos Mayores para cada una de las 3 posiciones.
+1. Interpreta EXCLUSIVAMENTE las 3 cartas sorteadas en el mismo orden y con las posiciones exactas indicadas arriba. No cambies los números, los nombres ni las posiciones.
 2. Brinda una interpretación desarrollada para cada una de las 3 posiciones conectadas a la pregunta del consultante.
 3. Brinda un cierre narrativo integrador que una las tres cartas como una historia con un consejo práctico final.
 4. Responde estrictamente en formato JSON según el schema.`;
@@ -614,6 +673,12 @@ ${pregunta ? `PREGUNTA INICIAL DE LA SESIÓN: "${String(pregunta)}"\n` : ''}`;
       prompt += '\n';
     }
 
+    if (cartaComplementariaSorteada) {
+      prompt += `CARTA ADICIONAL SORTEADA AL AZAR POR SI LA CONSULTA LO AMERITA:
+- Número: ${cartaComplementariaSorteada.numero}, Nombre exacto: "${cartaComplementariaSorteada.nombre}"
+(Si la pregunta no requiere carta nueva, deja "cartas_nuevas" como arreglo vacío []. Si sí la requiere, incluye ÚNICAMENTE esta carta sorteada, nunca otra).\n\n`;
+    }
+
     if (Array.isArray(historialChat) && historialChat.length > 0) {
       prompt += `HISTORIAL DE LA CONVERSACIÓN:\n`;
       for (const msg of historialChat.slice(-12)) {
@@ -625,10 +690,9 @@ ${pregunta ? `PREGUNTA INICIAL DE LA SESIÓN: "${String(pregunta)}"\n` : ''}`;
     prompt += `NUEVA PREGUNTA DEL CONSULTANTE: "${String(nuevaPregunta || '')}"
 
 INSTRUCCIÓN ESPECÍFICA:
-1. Responde a la pregunta de seguimiento de forma empática, conectando con las cartas ya vistas en la sesión.
-2. Si y solo si la pregunta amerita genuinamente traer una carta adicional complementaria, inclúyela en "cartas_nuevas", de lo contrario deja el arreglo vacío.
-3. Mantén coherencia, calidez, mística y practicidad.
-4. Responde estrictamente en formato JSON según el schema.`;
+1. Responde a la pregunta de seguimiento de forma empática y en tuteo neutro, conectando con las cartas ya vistas en la sesión.
+2. No inventes ni elijas cartas por tu cuenta: si y solo si la consulta amerita genuinamente una carta adicional, usa exclusivamente la carta adicional sorteada arriba en "cartas_nuevas"; de lo contrario deja el arreglo vacío [].
+3. Responde estrictamente en formato JSON según el schema.`;
   }
 
   return prompt;
@@ -642,44 +706,92 @@ function isNonEmptyString(v) {
   return typeof v === 'string' && v.trim().length > 0;
 }
 
-function validateCartaGratis(data) {
-  if (!data || typeof data !== 'object') return false;
-  if (!data.carta || typeof data.carta !== 'object') return false;
-  if (!isValidCardNumber(data.carta.numero)) return false;
-  if (!isNonEmptyString(data.carta.nombre)) return false;
-  if (!isNonEmptyString(data.interpretacion_breve)) return false;
-  return true;
-}
-
-function validateTresCartas(data) {
-  if (!data || typeof data !== 'object') return false;
-  if (!Array.isArray(data.cartas) || data.cartas.length !== 3) return false;
-  if (!isNonEmptyString(data.cierre_narrativo)) return false;
-  const seen = new Set();
-  for (const c of data.cartas) {
-    if (!c || typeof c !== 'object') return false;
-    if (!isNonEmptyString(c.posicion)) return false;
-    if (!isValidCardNumber(c.numero)) return false;
-    if (seen.has(c.numero)) return false;
-    seen.add(c.numero);
-    if (!isNonEmptyString(c.nombre)) return false;
-    if (!isNonEmptyString(c.interpretacion)) return false;
+function validateCartaGratis(data, cartaSorteada) {
+  if (!data || typeof data !== 'object') {
+    return { ok: false, kind: 'SCHEMA_INVALID', detail: 'Respuesta JSON no es un objeto' };
   }
-  return true;
+  if (!data.carta || typeof data.carta !== 'object') {
+    return { ok: false, kind: 'SCHEMA_INVALID', detail: 'Falta objeto carta' };
+  }
+  if (!isValidCardNumber(data.carta.numero)) {
+    return { ok: false, kind: 'SCHEMA_INVALID', detail: `Número de carta inválido (${String(data.carta.numero)})` };
+  }
+  if (!isNonEmptyString(data.interpretacion_breve)) {
+    return { ok: false, kind: 'SCHEMA_INVALID', detail: 'Falta interpretacion_breve' };
+  }
+  if (data.carta.numero !== cartaSorteada.numero) {
+    return {
+      ok: false,
+      kind: 'CARD_MISMATCH',
+      detail: `Se sorteó #${cartaSorteada.numero} y el modelo devolvió #${data.carta.numero}`,
+    };
+  }
+  return { ok: true };
 }
 
-function validateChat(data) {
-  if (!data || typeof data !== 'object') return false;
-  if (!isNonEmptyString(data.respuesta)) return false;
-  if (data.cartas_nuevas !== undefined) {
-    if (!Array.isArray(data.cartas_nuevas)) return false;
-    for (const c of data.cartas_nuevas) {
-      if (!c || typeof c !== 'object') return false;
-      if (!isValidCardNumber(c.numero)) return false;
-      if (!isNonEmptyString(c.nombre)) return false;
+function validateTresCartas(data, cartasSorteadas) {
+  if (!data || typeof data !== 'object') {
+    return { ok: false, kind: 'SCHEMA_INVALID', detail: 'Respuesta JSON no es un objeto' };
+  }
+  if (!Array.isArray(data.cartas) || data.cartas.length !== 3) {
+    return { ok: false, kind: 'SCHEMA_INVALID', detail: 'El arreglo cartas no tiene 3 elementos' };
+  }
+  if (!isNonEmptyString(data.cierre_narrativo)) {
+    return { ok: false, kind: 'SCHEMA_INVALID', detail: 'Falta cierre_narrativo' };
+  }
+  const seen = new Set();
+  for (let i = 0; i < 3; i++) {
+    const c = data.cartas[i];
+    const esperada = cartasSorteadas[i].carta;
+    if (!c || typeof c !== 'object') {
+      return { ok: false, kind: 'SCHEMA_INVALID', detail: `Carta en índice ${i} inválida` };
+    }
+    if (!isValidCardNumber(c.numero) || seen.has(c.numero)) {
+      return { ok: false, kind: 'SCHEMA_INVALID', detail: `Número inválido o repetido en índice ${i}` };
+    }
+    seen.add(c.numero);
+    if (!isNonEmptyString(c.interpretacion)) {
+      return { ok: false, kind: 'SCHEMA_INVALID', detail: `Falta interpretacion en índice ${i}` };
+    }
+    if (c.numero !== esperada.numero) {
+      return {
+        ok: false,
+        kind: 'CARD_MISMATCH',
+        detail: `Posición ${i + 1}: se sorteó #${esperada.numero} y el modelo devolvió #${c.numero}`,
+      };
     }
   }
-  return true;
+  return { ok: true };
+}
+
+function validateChat(data, cartaComplementaria) {
+  if (!data || typeof data !== 'object') {
+    return { ok: false, kind: 'SCHEMA_INVALID', detail: 'Respuesta JSON no es un objeto' };
+  }
+  if (!isNonEmptyString(data.respuesta)) {
+    return { ok: false, kind: 'SCHEMA_INVALID', detail: 'Falta respuesta' };
+  }
+  if (data.cartas_nuevas !== undefined) {
+    if (!Array.isArray(data.cartas_nuevas)) {
+      return { ok: false, kind: 'SCHEMA_INVALID', detail: 'cartas_nuevas no es un arreglo' };
+    }
+    if (data.cartas_nuevas.length > 1) {
+      return { ok: false, kind: 'SCHEMA_INVALID', detail: 'Más de 1 carta complementaria' };
+    }
+    for (const c of data.cartas_nuevas) {
+      if (!c || typeof c !== 'object' || !isValidCardNumber(c.numero)) {
+        return { ok: false, kind: 'SCHEMA_INVALID', detail: 'Carta complementaria inválida' };
+      }
+      if (!cartaComplementaria || c.numero !== cartaComplementaria.numero) {
+        return {
+          ok: false,
+          kind: 'CARD_MISMATCH',
+          detail: `Carta complementaria: se sorteó #${cartaComplementaria?.numero ?? 'ninguna'} y devolvió #${c.numero}`,
+        };
+      }
+    }
+  }
+  return { ok: true };
 }
 
 function parseJsonStrict(rawText) {
@@ -692,7 +804,7 @@ function parseJsonStrict(rawText) {
   return JSON.parse(cleaned);
 }
 
-async function callGeminiWithSchema({ apiKey, prompt, responseSchema, validator }) {
+async function callGeminiWithSchema({ endpointTag, apiKey, prompt, responseSchema, validator }) {
   let lastError = null;
 
   for (const model of MODEL_CANDIDATES) {
@@ -738,7 +850,8 @@ async function callGeminiWithSchema({ apiKey, prompt, responseSchema, validator 
 
         if (!res.ok) {
           const isTransient = res.status === 429 || res.status === 503 || res.status >= 500;
-          lastError = new Error(`Gemini HTTP ${res.status}`);
+          lastError = new Error(`ERROR_API_GEMINI status=${res.status} modelo=${model}`);
+          console.warn(`[Tarot][${endpointTag}] ERROR_API_GEMINI | modelo=${model} | status=${res.status}`);
           if (!isTransient) break;
           continue;
         }
@@ -746,24 +859,29 @@ async function callGeminiWithSchema({ apiKey, prompt, responseSchema, validator 
         const payload = await res.json();
         const rawText = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!rawText) {
-          lastError = new Error('Empty response from Gemini');
+          lastError = new Error(`RESPUESTA_VACIA_GEMINI modelo=${model}`);
+          console.warn(`[Tarot][${endpointTag}] RESPUESTA_VACIA_GEMINI | modelo=${model}`);
           continue;
         }
 
         const parsed = parseJsonStrict(rawText);
-        if (!validator(parsed)) {
-          lastError = new Error('Schema validation failed');
+        const validation = validator(parsed);
+        if (validation.ok === false) {
+          const code = validation.kind === 'CARD_MISMATCH' ? 'FALLO_VERIFICACION_CARTA' : 'FALLO_VALIDACION_SCHEMA';
+          lastError = new Error(`${code} ${validation.detail}`);
+          console.warn(`[Tarot][${endpointTag}] ${code} | modelo=${model} | detalle=${validation.detail}`);
           continue;
         }
 
         return parsed;
       } catch (err) {
         lastError = err;
+        console.warn(`[Tarot][${endpointTag}] ERROR_LLAMADA | modelo=${model} | detalle=${err?.message || String(err)}`);
       }
     }
   }
 
-  throw lastError || new Error('Gemini unavailable');
+  throw lastError || new Error('GEMINI_NO_DISPONIBLE');
 }
 
 export default {
@@ -813,7 +931,7 @@ export default {
         return jsonResponse(
           {
             success: false,
-            error: 'Las cartas necesitan un momento de silencio. Probá de nuevo en unos segundos.',
+            error: 'Las cartas necesitan un momento de silencio. Prueba de nuevo en unos segundos.',
           },
           503,
           origin
@@ -827,7 +945,7 @@ export default {
         return jsonResponse(
           {
             success: false,
-            error: 'Las cartas necesitan un momento de silencio. Probá de nuevo en unos segundos.',
+            error: 'Las cartas necesitan un momento de silencio. Prueba de nuevo en unos segundos.',
           },
           400,
           origin
@@ -844,12 +962,13 @@ export default {
           MAX_FREE_CARDS_PER_DAY
         );
         if (!limit.allowed) {
+          console.warn('[Tarot][carta-gratis] LIMITE_DIARIO_IP');
           return jsonResponse(
             {
               success: false,
               code: 'RATE_LIMIT_EXCEEDED',
               error:
-                'Hoy ya consultaste tus 5 cartas gratuitas. Las cartas necesitan reposar hasta mañana para seguir guiándote con claridad.',
+                'Por hoy ya recibiste tus cartas gratis. Vuelve mañana, o desbloquea la Tirada Completa de 3 Cartas para profundizar.',
             },
             429,
             origin
@@ -860,32 +979,42 @@ export default {
         const pregunta = typeof body?.pregunta === 'string' ? body.pregunta.slice(0, 400) : '';
 
         try {
-          const prompt = buildLunaPrompt({ tipo: 'carta_gratis', tema, pregunta });
+          const [cartaSorteada] = sortearCartasFisherYates(1);
+          const prompt = buildLunaPrompt({
+            tipo: 'carta_gratis',
+            tema,
+            pregunta,
+            cartaSorteada,
+          });
           const parsedData = await callGeminiWithSchema({
+            endpointTag: 'carta-gratis',
             apiKey: env.GEMINI_API_KEY,
             prompt,
             responseSchema: LUNA_SCHEMA_CARTA_GRATIS,
-            validator: validateCartaGratis,
+            validator: (data) => validateCartaGratis(data, cartaSorteada),
           });
-
-          const cartaEncontrada =
-            obtenerCartaPorNumero(parsedData.carta.numero) ||
-            obtenerCartaPorNombre(parsedData.carta.nombre);
 
           return jsonResponse(
             {
               success: true,
-              data: parsedData,
-              cartaDetalle: cartaEncontrada,
+              data: {
+                carta: {
+                  numero: cartaSorteada.numero,
+                  nombre: cartaSorteada.nombre,
+                },
+                interpretacion_breve: parsedData.interpretacion_breve,
+              },
+              cartaDetalle: cartaSorteada,
             },
             200,
             origin
           );
-        } catch {
+        } catch (err) {
+          console.error(`[Tarot][carta-gratis] FALLO_LECTURA | tema=${tema} | detalle=${err?.message || String(err)}`);
           return jsonResponse(
             {
               success: false,
-              error: 'Las cartas necesitan un momento de silencio. Probá de nuevo en unos segundos.',
+              error: 'Las cartas necesitan un momento de silencio. Prueba de nuevo en unos segundos.',
             },
             502,
             origin
@@ -901,6 +1030,7 @@ export default {
           MAX_OTHER_REQUESTS_PER_DAY
         );
         if (!limit.allowed) {
+          console.warn('[Tarot][lectura-tres-cartas] LIMITE_DIARIO_IP');
           return jsonResponse(
             {
               success: false,
@@ -915,43 +1045,55 @@ export default {
 
         const tema = typeof body?.tema === 'string' ? body.tema.slice(0, 30) : 'futuro';
         const pregunta = typeof body?.pregunta === 'string' ? body.pregunta.slice(0, 500) : '';
-        const posiciones = Array.isArray(body?.posiciones) ? body.posiciones.slice(0, 3) : undefined;
+        const esquemaId = typeof body?.esquemaId === 'string' ? body.esquemaId : 'situacion_obstaculo_consejo';
 
         try {
+          const posiciones = resolverPosicionesServidor(esquemaId);
+          const cartasAleatorias = sortearCartasFisherYates(3);
+          const cartasSorteadas = cartasAleatorias.map((carta, i) => ({
+            posicion: posiciones[i],
+            carta,
+          }));
+
           const prompt = buildLunaPrompt({
             tipo: 'tres_cartas',
             tema,
             pregunta,
-            esquemaPosiciones: posiciones,
+            cartasSorteadas,
           });
           const parsedData = await callGeminiWithSchema({
+            endpointTag: 'lectura-tres-cartas',
             apiKey: env.GEMINI_API_KEY,
             prompt,
             responseSchema: LUNA_SCHEMA_TRES_CARTAS,
-            validator: validateTresCartas,
+            validator: (data) => validateTresCartas(data, cartasSorteadas),
           });
 
-          const cartasConDetalles = parsedData.cartas.map((c) => ({
-            ...c,
-            detalle: obtenerCartaPorNumero(c.numero) || obtenerCartaPorNombre(c.nombre),
+          const cartasConDetalles = cartasSorteadas.map((item, i) => ({
+            posicion: item.posicion,
+            numero: item.carta.numero,
+            nombre: item.carta.nombre,
+            interpretacion: parsedData.cartas[i].interpretacion,
+            detalle: item.carta,
           }));
 
           return jsonResponse(
             {
               success: true,
               data: {
-                ...parsedData,
                 cartas: cartasConDetalles,
+                cierre_narrativo: parsedData.cierre_narrativo,
               },
             },
             200,
             origin
           );
-        } catch {
+        } catch (err) {
+          console.error(`[Tarot][lectura-tres-cartas] FALLO_LECTURA | tema=${tema} | detalle=${err?.message || String(err)}`);
           return jsonResponse(
             {
               success: false,
-              error: 'Las cartas necesitan un momento de silencio. Probá de nuevo en unos segundos.',
+              error: 'Las cartas necesitan un momento de silencio. Prueba de nuevo en unos segundos.',
             },
             502,
             origin
@@ -967,6 +1109,7 @@ export default {
           MAX_OTHER_REQUESTS_PER_DAY
         );
         if (!limit.allowed) {
+          console.warn('[Tarot][chat] LIMITE_DIARIO_IP');
           return jsonResponse(
             {
               success: false,
@@ -991,7 +1134,7 @@ export default {
           return jsonResponse(
             {
               success: false,
-              error: 'Escribí tu pregunta para que Luna pueda escucharte.',
+              error: 'Escribe tu pregunta para que Luna pueda escucharte.',
             },
             400,
             origin
@@ -999,25 +1142,34 @@ export default {
         }
 
         try {
+          const numerosExcluidos = cartasPrevias
+            .map((c) => Number(c?.numero))
+            .filter((n) => Number.isInteger(n) && n >= 0 && n <= 21);
+          const [cartaComplementaria] = sortearCartasFisherYates(1, numerosExcluidos);
+
           const prompt = buildLunaPrompt({
             tipo: 'chat',
             tema,
             pregunta: preguntaInicial,
             cartasPrevias,
+            cartaComplementariaSorteada: cartaComplementaria || null,
             historialChat,
             nuevaPregunta,
           });
           const parsedData = await callGeminiWithSchema({
+            endpointTag: 'chat',
             apiKey: env.GEMINI_API_KEY,
             prompt,
             responseSchema: LUNA_SCHEMA_CHAT,
-            validator: validateChat,
+            validator: (data) => validateChat(data, cartaComplementaria || null),
           });
 
-          if (Array.isArray(parsedData.cartas_nuevas)) {
+          if (Array.isArray(parsedData.cartas_nuevas) && cartaComplementaria) {
             parsedData.cartas_nuevas = parsedData.cartas_nuevas.map((c) => ({
-              ...c,
-              detalle: obtenerCartaPorNumero(c.numero) || obtenerCartaPorNombre(c.nombre),
+              numero: cartaComplementaria.numero,
+              nombre: cartaComplementaria.nombre,
+              motivo: c.motivo,
+              detalle: cartaComplementaria,
             }));
           }
 
@@ -1029,11 +1181,12 @@ export default {
             200,
             origin
           );
-        } catch {
+        } catch (err) {
+          console.error(`[Tarot][chat] FALLO_LECTURA | tema=${tema} | detalle=${err?.message || String(err)}`);
           return jsonResponse(
             {
               success: false,
-              error: 'Las cartas necesitan un momento de silencio. Probá de nuevo en unos segundos.',
+              error: 'Las cartas necesitan un momento de silencio. Prueba de nuevo en unos segundos.',
             },
             502,
             origin

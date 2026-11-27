@@ -1,18 +1,20 @@
 import React from 'react';
-import { Sparkles, Layers, MessageSquare, BookOpen, Moon, Code2 } from 'lucide-react';
+import { Sparkles, Layers, MessageSquare, BookOpen, Lock, LogOut } from 'lucide-react';
 import { TipoTirada } from '../types/tarot';
 import { PWAInstallButton } from './PWAInstallButton';
 
 interface HeaderProps {
   activeTab: TipoTirada | 'grimoire';
   onSelectTab: (tab: TipoTirada | 'grimoire') => void;
-  onOpenConfigModal: () => void;
+  unlocked: boolean;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onSelectTab,
-  onOpenConfigModal,
+  unlocked,
+  onLogout,
 }) => {
   return (
     <header className="w-full border-b border-[#D4AF37]/30 bg-[#0A0712]/95 backdrop-blur-md sticky top-0 z-40">
@@ -40,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-1.5 bg-[#151025]/80 p-1.5 rounded-xl border border-[#D4AF37]/20 text-xs shadow-inner">
+        <div className="flex items-center flex-wrap justify-center gap-1.5 bg-[#151025]/80 p-1.5 rounded-xl border border-[#D4AF37]/20 text-xs shadow-inner">
           <button
             id="tab-free-card"
             onClick={() => onSelectTab('carta_gratis')}
@@ -65,6 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Layers className="w-3.5 h-3.5" />
             <span>3 Cartas</span>
+            {!unlocked && <Lock className="w-3 h-3 opacity-80" aria-label="Requiere desbloqueo" />}
           </button>
 
           <button
@@ -78,6 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <MessageSquare className="w-3.5 h-3.5" />
             <span>Chat Luna</span>
+            {!unlocked && <Lock className="w-3 h-3 opacity-80" aria-label="Requiere desbloqueo" />}
           </button>
 
           <button
@@ -94,16 +98,21 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Action / Inspect Config & PWA Install */}
+        {/* PWA Install & Session Logout */}
         <div className="flex items-center gap-2">
+          {unlocked && onLogout && (
+            <button
+              id="logout-access-btn"
+              type="button"
+              onClick={onLogout}
+              title="Cerrar sesión de compra en este navegador"
+              className="px-2.5 py-1.5 rounded-lg border border-[#D4AF37]/30 bg-[#151025] hover:bg-[#1A1435] text-[#D4AF37]/80 hover:text-[#D4AF37] text-[11px] font-cinzel flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Salir</span>
+            </button>
+          )}
           <PWAInstallButton />
-          <button
-            onClick={onOpenConfigModal}
-            className="hidden sm:flex text-xs text-[#D4AF37] font-bold hover:bg-[#D4AF37]/20 bg-[#D4AF37]/10 border border-[#D4AF37]/40 px-3.5 py-2 rounded-xl items-center gap-1.5 transition-all cursor-pointer shadow-sm tracking-wider uppercase"
-          >
-            <Code2 className="w-3.5 h-3.5 text-[#D4AF37]" />
-            <span>Config: Luna</span>
-          </button>
         </div>
       </div>
     </header>
